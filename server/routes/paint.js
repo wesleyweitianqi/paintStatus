@@ -5,8 +5,6 @@ const Status = require('../models/paintStatus');
 router.get('/', async (req, res, next) => {
     try{
       const paintedList = await Status.find();
-      console.log("🚀 ~ router.get ~ paintedList:", paintedList)
-      console.log(paintedList);
       res.send({code:0, data: paintedList});
     }catch(e){
       console.log(e);
@@ -27,6 +25,18 @@ router.get('/', async (req, res, next) => {
     }catch(e){
       console.log(e);
     }
+  })
+
+  router.post("/delete", async (req, res, next)=> {
+    try{
+      const { deleteWo } = req.body;
+
+      const list = await Status.findOneAndDelete({wo: deleteWo});
+      res.send({code:0, data: list});
+    }catch(e){
+      console.log(e);
+    }
+    
   })
 
 module.exports = router;

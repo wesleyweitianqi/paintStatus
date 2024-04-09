@@ -32,10 +32,10 @@ router.post("/delete", async (req, res) => {
   try {
     const { code } = req.body;
     const result = await Powder.findOneAndDelete({ code: code });
-    if (result.length > 0) {
+    if (result) {
       res.send({ code: 0, data: true });
     } else {
-      res.send({ code: 0, data: false });
+      res.send({ code: 1, data: false });
     }
   } catch (e) {
     console.log(e);

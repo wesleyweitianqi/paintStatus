@@ -2,3 +2,10 @@
   // width: 80%;
   margin: auto;
 }
+
+.active {
+  color: #161718; /* Change color for active links */
+  background-color: rgba(192, 192, 201, 0.5) !important;
+
+  font-weight: bold; /* Make active links bold */
+}

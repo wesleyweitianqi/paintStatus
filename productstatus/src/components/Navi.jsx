@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import classNames from "classnames";
 import styles from "../styles/navi.module.scss";
-import { useNavigate, Link } from "react-router-dom";
 
 const Navi = () => {
+  const location = useLocation();
   const [activeLink, setActiveLink] = useState("/paint"); // Initial active link
-  const navigate = useNavigate();
-  const handleClick = (path) => {
-    setActiveLink(path);
-    navigate(path);
-  };
 
   useEffect(() => {
-    const href = "/" + document.location.href.split("/").pop();
-    setActiveLink(href);
-  }, []);
+    setActiveLink(location.pathname);
+  }, [location.pathname]);
+
   return (
     <div className={styles.naviContainer}>
       <nav className="navbar navbar-expand-lg navbar-light bg-light">
@@ -21,7 +18,7 @@ const Navi = () => {
           <Link
             className="navbar-brand"
             to="/"
-            onClick={() => handleClick("/paint")}
+            onClick={() => setActiveLink("/paint")}
           >
             Rex
           </Link>
@@ -38,44 +35,38 @@ const Navi = () => {
           </button>
           <div className="collapse navbar-collapse" id="navbarNavAltMarkup">
             <div className="navbar-nav nav-pills">
-              <Link
-                className={`nav-link ${
-                  activeLink === "/paint" ? "active" : ""
-                }`}
-                aria-current="page"
+              <NavLink
+                className={classNames("nav-link", {
+                  [styles.active]: activeLink === "/paint",
+                })}
                 to="/paint"
-                onClick={() => handleClick("/paint")}
               >
                 Paint
-              </Link>
-              <Link
-                className={`nav-link ${activeLink === "/ship" ? "active" : ""}`}
-                aria-current="page"
+              </NavLink>
+              <NavLink
+                className={classNames("nav-link", {
+                  [styles.active]: activeLink === "/ship",
+                })}
                 to="/ship"
-                onClick={() => handleClick("/ship")}
               >
                 Shipping
-              </Link>
-              <Link
-                className={`nav-link ${
-                  activeLink === "/powder" ? "active" : ""
-                }`}
-                aria-current="page"
+              </NavLink>
+              <NavLink
+                className={classNames("nav-link", {
+                  [styles.active]: activeLink === "/powder",
+                })}
                 to="/powder"
-                onClick={() => handleClick("/powder")}
               >
                 Powder
-              </Link>
-              <Link
-                className={`nav-link ${
-                  activeLink === "/coreclamp" ? "active" : ""
-                }`}
-                aria-current="page"
+              </NavLink>
+              <NavLink
+                className={classNames("nav-link", {
+                  [styles.active]: activeLink === "/coreclamp",
+                })}
                 to="/coreclamp"
-                onClick={() => handleClick("/coreclamp")}
               >
                 CoreClamps
-              </Link>
+              </NavLink>
             </div>
           </div>
         </div>

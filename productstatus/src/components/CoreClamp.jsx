@@ -3,10 +3,10 @@ import React, { useEffect, useState } from "react";
 import "../styles/global.scss";
 import { Link, useNavigate } from "react-router-dom";
 import instance from "../utils/http";
-// import { ToastContainer, toast } from "react-toastify";
-// import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { Button } from "antd";
-// import styles from "../styles/bracketComplete.module.scss";
+import styles from "../styles/coreclamp.module.scss";
 import _ from "lodash";
 
 function CoreClamp() {
@@ -15,12 +15,15 @@ function CoreClamp() {
   const navigate = useNavigate();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
+  const [completedList, setCompletedList] = useState([]);
   const host = "https://192.168.1.169:8080";
 
   useEffect(() => {
     instance.get("/coreclamp/list").then((res) => {
-      console.log(res.data.data);
       setCCList(res.data.data);
+    });
+    instance.get("/coreclamp/completed").then((res) => {
+      setCompletedList(res.data.data);
     });
   }, []);
 
@@ -59,9 +62,26 @@ function CoreClamp() {
         </td>
         <td>{item.isComplete ? "Completed" : "producing"}</td>
         <td>{fileDom}</td>
+        <td>
+          <Button onClick={() => finishHandler(item.wo)}>Finish</Button>
+        </td>
       </tr>
     );
   });
+
+  const completedDataSource = completedList?.map((item, index) => {
+    const list = "";
+    return list + item.wo + "  ";
+  });
+
+  const finishHandler = async (wo) => {
+    instance.post("/coreclamp/finish", { wo: wo }).then((res) => {
+      if (res.data.data) {
+        const newList = ccList.filter((i) => i.wo !== wo);
+        setCCList(newList);
+      }
+    });
+  };
 
   const handleInput = (e) => {
     setSearch(e.target.value);
@@ -81,10 +101,10 @@ function CoreClamp() {
   };
 
   const handleSubmit = () => {
-    instance.post("/coreclamps/list", { wo: search }).then((res) => {
+    instance.post("/coreclamp/search", { wo: search }).then((res) => {
       const searchResult = res.data.data;
       if (!searchResult) {
-        // toast(`${search} is not exist`);
+        toast(`${search} is not exist`);
       }
       setSearchResult(searchResult);
     });
@@ -92,9 +112,7 @@ function CoreClamp() {
 
   return (
     <div>
-      <h4>Core Clamps List</h4>
-      <hr />
-      <Button onClick={handleClick}>To add</Button>
+      {/* <Button onClick={handleClick}>To add</Button>
       <div>
         <input
           name="bktSearch"
@@ -105,7 +123,9 @@ function CoreClamp() {
           onBlur={handleInputBlur}
         />
         <button onClick={handleSubmit}>Search</button>
-      </div>
+      </div> */}
+      <h4>To Do List</h4>
+      <hr />
 
       <table className="table">
         <thead>
@@ -116,11 +136,19 @@ function CoreClamp() {
             <th scope="col">Create_time</th>
             <th scope="col">Status</th>
             <th scope="col">Files</th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody>{dataSourceEle}</tbody>
       </table>
-      {/* <ToastContainer
+      <h4>History</h4>
+      <hr />
+      <p>All core clamps WOs completed this year:</p>
+      <div className={styles.listContainer}>
+        <p>{completedDataSource}</p>
+      </div>
+
+      <ToastContainer
         position="top-center"
         autoClose={5000}
         hideProgressBar={false}
@@ -131,7 +159,7 @@ function CoreClamp() {
         draggable
         pauseOnHover
         theme="light"
-      /> */}
+      />
     </div>
   );
 }

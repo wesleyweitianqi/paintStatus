@@ -1,0 +1,94 @@
+.container {
+  padding: 20px;
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.table {
+  :global {
+    .ant-table-thead > tr > th {
+      background-color: #f0f2f5;
+    }
+
+    .ant-table-tbody > tr > td {
+      padding: 8px 16px;
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background-color: #e6f7ff;
+    }
+  }
+}
+
+.finishButton {
+  background-color: #4caf50;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  margin: 2px 2px;
+  cursor: pointer;
+  border-radius: 3px;
+
+  &:hover {
+    background-color: #45a049;
+  }
+}
+
+h2 {
+  text-align: left;
+}
+
+.shearContainer {
+  padding: 24px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .mainTable {
+    :global {
+      .ant-table-thead > tr > th {
+        background-color: #f0f2f5;
+      }
+
+      .ant-table-tbody > tr > td {
+        padding: 16px;
+      }
+
+      .ant-table-tbody > tr.ant-table-expanded-row > td {
+        padding: 0;
+      }
+
+      .ant-table-tbody > tr.ant-table-expanded-row:hover > td {
+        background-color: #ffffff;
+      }
+    }
+  }
+
+  .expandedRow {
+    margin: 0 -16px;
+    padding: 16px;
+    background-color: #f9f9f9;
+
+    :global {
+      .ant-table {
+        margin-bottom: 0;
+      }
+
+      .ant-table-thead > tr > th {
+        background-color: #e6e6e6;
+      }
+    }
+  }
+}

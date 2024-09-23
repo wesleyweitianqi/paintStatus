@@ -1,6 +1,5 @@
 import "./App.css";
 import { useEffect } from "react";
-import Status from "./components/Status";
 import "./styles/global.scss";
 import Navi from "./components/Navi";
 import { Outlet } from "react-router-dom";

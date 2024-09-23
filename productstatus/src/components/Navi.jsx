@@ -1,78 +1,61 @@
-import React, { useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
-import classNames from "classnames";
-import styles from "../styles/navi.module.scss";
+import React from "react";
+import { Link } from "react-router-dom";
 
-const Navi = () => {
-  const location = useLocation();
-  const [activeLink, setActiveLink] = useState("/paint"); // Initial active link
-
-  useEffect(() => {
-    setActiveLink(location.pathname);
-  }, [location.pathname]);
-
+function Navi() {
   return (
-    <div className={styles.naviContainer}>
-      <nav className="navbar navbar-expand-lg navbar-light bg-light">
-        <div className="container-fluid">
-          <Link
-            className="navbar-brand"
-            to="/"
-            onClick={() => setActiveLink("/paint")}
-          >
-            Rex
-          </Link>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNavAltMarkup"
-            aria-controls="navbarNavAltMarkup"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="navbarNavAltMarkup">
-            <div className="navbar-nav nav-pills">
-              <NavLink
-                className={classNames("nav-link", {
-                  [styles.active]: activeLink === "/paint",
-                })}
-                to="/paint"
-              >
-                Paint
-              </NavLink>
-              <NavLink
-                className={classNames("nav-link", {
-                  [styles.active]: activeLink === "/ship",
-                })}
-                to="/ship"
-              >
+    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+      <div className="container-fluid">
+        <Link className="navbar-brand" to="/">
+          Paint Status
+        </Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <Link className="nav-link" to="/status">
+                Status
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/paint">
+                Painting
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/ship">
                 Shipping
-              </NavLink>
-              <NavLink
-                className={classNames("nav-link", {
-                  [styles.active]: activeLink === "/powder",
-                })}
-                to="/powder"
-              >
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/powder">
                 Powder
-              </NavLink>
-              <NavLink
-                className={classNames("nav-link", {
-                  [styles.active]: activeLink === "/coreclamp",
-                })}
-                to="/coreclamp"
-              >
-                CoreClamps
-              </NavLink>
-            </div>
-          </div>
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/coreclamp">
+                Core Clamp
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/shear">
+                Shearing
+              </Link>
+            </li>
+          </ul>
         </div>
-      </nav>
-    </div>
+      </div>
+    </nav>
   );
-};
+}
 
 export default Navi;

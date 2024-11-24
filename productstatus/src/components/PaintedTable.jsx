@@ -59,6 +59,7 @@ const PaintedTable = (props) => {
           rowExpandable: (record) => record.name !== "Not Expandable",
         }}
         dataSource={data}
+        pagination={false}
       />
     </div>
   );

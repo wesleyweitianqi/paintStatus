@@ -141,6 +141,8 @@ function CoreClamp() {
         </thead>
         <tbody>{dataSourceEle}</tbody>
       </table>
+      <h4>Finished Today</h4>
+      <hr />
       <h4>History</h4>
       <hr />
       <p>All core clamps WOs completed this year:</p>

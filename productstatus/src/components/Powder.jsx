@@ -11,7 +11,7 @@ const Powder = () => {
     instance
       .get("/powder")
       .then((res) => {
-        setList(res.data.data);
+        setList(res.data.data.reverse());
       })
       .catch((e) => {
         console.log(e);
@@ -132,7 +132,7 @@ const Powder = () => {
         <button type="submit">Submit</button>
       </form>
       <hr />
-      <div className={styles.detail}>
+      {/* <div className={styles.detail}>
         <h4>Special paint requirement:</h4>
         <p>
           <li>Paint Chip</li>
@@ -144,7 +144,7 @@ const Powder = () => {
         <h4>Price</h4>
         <ul>Special powder price: $35/kg. Minimum order: 25kg</ul>
         <ul>Special spray can: $25/can. Minimum order: 12 can</ul>
-      </div>
+      </div> */}
       <Table
         columns={columns}
         rowKey={(record) => record.key}
@@ -161,6 +161,7 @@ const Powder = () => {
           rowExpandable: (record) => record.name !== "Not Expandable",
         }}
         dataSource={data}
+        pagination={false}
       />
     </div>
   );

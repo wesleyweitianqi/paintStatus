@@ -22,6 +22,7 @@ router.post("/add", async (req, res) => {
     });
     await powder.save();
     const result = await Powder.find();
+    console.log("🚀 ~ router.post ~ result:", result);
     res.send({ code: 0, data: result });
   } catch (e) {
     console.log(e);

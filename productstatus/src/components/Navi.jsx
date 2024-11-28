@@ -31,11 +31,11 @@ function Navi() {
                 Painting
               </Link>
             </li>
-            <li className="nav-item">
+            {/* <li className="nav-item">
               <Link className="nav-link" to="/ship">
                 Shipping
               </Link>
-            </li>
+            </li> */}
             <li className="nav-item">
               <Link className="nav-link" to="/powder">
                 Powder

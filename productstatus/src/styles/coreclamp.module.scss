@@ -10,3 +10,27 @@ p {
 .listContainer {
   margin-bottom: 10%;
 }
+
+.searchButton {
+  position: absolute;
+  top: 50%;
+  left: 2.5%;
+}
+
+.todayCompleteContainer {
+  display: flex; // Use flexbox
+  flex-wrap: wrap; // Allow items to wrap to the next line if there's not enough space
+  gap: 16px; // Add space between the items
+}
+
+.todayCompleteContainer > div {
+  flex: 1; // Allow each item to grow and take available space
+  min-width: 200px; // Prevent items from being too small, you can adjust this
+  background-color: #f0f0f0; // Optional styling
+  padding: 8px; // Optional padding inside each item
+  text-align: left; // Optional, center the text inside the item
+  border: 1px solid #ddd; // Optional border around each item
+  Button {
+    margin-left: 1rem;
+  }
+}

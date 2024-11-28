@@ -37,6 +37,25 @@ router.post("/finish", async (req, res) => {
   }
 });
 
+router.get("/todaycomplete", async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const result = await CoreClamp.find({
+      isComplete: true,
+      updatedAt: { $gte: today },
+    });
+    if (result) {
+      res.send({ code: 0, data: result });
+      return;
+    } else {
+      res.send({ code: 1, data: false });
+    }
+  } catch (err) {
+    res.status(500).send({ code: 1, message: err });
+  }
+});
+
 router.get("/completed", async (req, res) => {
   try {
     const result = await CoreClamp.find({ isComplete: true });
@@ -63,6 +82,24 @@ router.post("/search", async (req, res) => {
     }
   } catch (err) {
     console.log(err);
+  }
+});
+
+router.post("/cancel", async (req, res) => {
+  try {
+    const { wo } = req.body;
+    const result = await CoreClamp.findOneAndUpdate(
+      { wo: wo },
+      { isComplete: false }
+    );
+    if (result) {
+      res.send({ code: 0, data: true });
+      return;
+    } else {
+      res.send({ code: 1, data: false });
+    }
+  } catch (err) {
+    res.status(500).send({ code: 1, message: err });
   }
 });
 

@@ -12,18 +12,35 @@ import _ from "lodash";
 function CoreClamp() {
   const [search, setSearch] = useState("");
   const [searchResult, setSearchResult] = useState([]);
+  const [todayComplete, setTodayComplete] = useState([]);
   const navigate = useNavigate();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
   const [completedList, setCompletedList] = useState([]);
   const host = "https://192.168.1.169:8080";
 
+  const fetchCCList = () => {
+    instance
+      .get("/coreclamp/list")
+      .then((res) => {
+        setCCList(res.data.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching ccList:", error);
+        toast.error("Failed to fetch updated list.");
+      });
+  };
+
   useEffect(() => {
-    instance.get("/coreclamp/list").then((res) => {
-      setCCList(res.data.data);
-    });
+    fetchCCList();
     instance.get("/coreclamp/completed").then((res) => {
       setCompletedList(res.data.data);
+    });
+    instance.get("/coreclamp/todaycomplete").then((res) => {
+      const data = res.data.data;
+      const arr = data.map((item) => item.wo);
+      console.log(arr);
+      setTodayComplete(arr);
     });
   }, []);
 
@@ -50,9 +67,9 @@ function CoreClamp() {
       <tr key={index}>
         <th scope="row">{index}</th>
         <td>
-          <Link to={`/data/${item.wo}`} className="fw-bold mb-1">
-            {item.wo}
-          </Link>
+          {/* <Link to={`/data/${item.wo}`} className="fw-bold mb-1"> */}
+          {item.wo}
+          {/* </Link> */}
         </td>
         <td>{item.qty}</td>
         <td>
@@ -69,44 +86,40 @@ function CoreClamp() {
     );
   });
 
+  const cancelHandler = async (wo) => {
+    instance.post("/coreclamp/cancel", { wo: wo }).then((res) => {
+      console.log(res.data.data);
+      if (res.data.data) {
+        const newList = todayComplete.filter((i) => i !== wo);
+        setTodayComplete(newList);
+        fetchCCList();
+      } else {
+        toast.error("Failed to cancel");
+      }
+    });
+  };
+
+  const todayCompleteEle = todayComplete.map((item, index) => {
+    return (
+      <div key={index}>
+        <span>{item}</span>
+        <Button onClick={() => cancelHandler(item)}>Cancel</Button>
+      </div>
+    );
+  });
+
   const completedDataSource = completedList?.map((item, index) => {
     const list = "";
     return list + item.wo + "  ";
   });
 
   const finishHandler = async (wo) => {
+    setTodayComplete([...todayComplete, wo]);
     instance.post("/coreclamp/finish", { wo: wo }).then((res) => {
       if (res.data.data) {
         const newList = ccList.filter((i) => i.wo !== wo);
         setCCList(newList);
       }
-    });
-  };
-
-  const handleInput = (e) => {
-    setSearch(e.target.value);
-    console.log(search);
-  };
-
-  const handleInputFocus = () => {
-    setIsSearchFocused(true);
-  };
-
-  const handleInputBlur = () => {
-    setIsSearchFocused(false);
-  };
-
-  const handleClick = () => {
-    navigate("/coreclamps/add");
-  };
-
-  const handleSubmit = () => {
-    instance.post("/coreclamp/search", { wo: search }).then((res) => {
-      const searchResult = res.data.data;
-      if (!searchResult) {
-        toast(`${search} is not exist`);
-      }
-      setSearchResult(searchResult);
     });
   };
 
@@ -142,6 +155,7 @@ function CoreClamp() {
         <tbody>{dataSourceEle}</tbody>
       </table>
       <h4>Finished Today</h4>
+      <div className={styles.todayCompleteContainer}>{todayCompleteEle}</div>
       <hr />
       <h4>History</h4>
       <hr />
@@ -149,6 +163,9 @@ function CoreClamp() {
       <div className={styles.listContainer}>
         <p>{completedDataSource}</p>
       </div>
+      {/* <Button className={styles.searchButton} onClick={triggerFindInPage}>
+        Search
+      </Button> */}
 
       <ToastContainer
         position="top-center"

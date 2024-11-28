@@ -39,7 +39,7 @@ function CoreClamp() {
     instance.get("/coreclamp/todaycomplete").then((res) => {
       const data = res.data.data;
       const arr = data.map((item) => item.wo);
-      console.log(arr);
+
       setTodayComplete(arr);
     });
   }, []);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Table } from "antd";
 import instance from "../utils/http";
 import styles from "../styles/powder.module.scss";
+import CurrentPaint from "./CurrentPaint";
 
 const Powder = () => {
   const [list, setList] = useState([]);

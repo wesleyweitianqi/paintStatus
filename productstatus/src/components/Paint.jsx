@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import styles from "../styles/status.module.scss";
 import PaintedTable from "./PaintedTable.jsx";
 import instance from "../utils/http.js";
+import CurrentPaint from "./CurrentPaint.jsx";
 
 const Status = () => {
   const [wo, setWo] = useState("");
@@ -68,6 +69,8 @@ const Status = () => {
         <label>Painted</label>
       </div>
       <hr />
+      <h4>Current Paint</h4>
+      <CurrentPaint />
       <p>Painted List</p>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>

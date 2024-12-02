@@ -13,9 +13,12 @@ function CoreClamp() {
   const [search, setSearch] = useState("");
   const [searchResult, setSearchResult] = useState([]);
   const [todayComplete, setTodayComplete] = useState([]);
+  const [formData, setFormData] = useState({});
+
   const navigate = useNavigate();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
+
   const [completedList, setCompletedList] = useState([]);
   const host = "https://192.168.1.169:8080";
 
@@ -43,6 +46,25 @@ function CoreClamp() {
       setTodayComplete(arr);
     });
   }, []);
+
+  useEffect(() => {
+    // Initialize formData with default values for each item in todayComplete
+    const initialFormData = todayComplete.reduce((acc, item) => {
+      if (!acc[item]) {
+        acc[item] = {
+          switch1: false,
+          switch2: false,
+          switch3: false,
+          comment: "",
+          start: null,
+          end: null,
+        };
+      }
+      return acc;
+    }, {});
+
+    setFormData(initialFormData); // Update formData with defaults
+  }, [todayComplete]);
 
   const dataSource = isSearchFocused ? searchResult : ccList;
 
@@ -93,20 +115,155 @@ function CoreClamp() {
         const newList = todayComplete.filter((i) => i !== wo);
         setTodayComplete(newList);
         fetchCCList();
+        setFormData((prevFormData) => {
+          const updatedFormData = { ...prevFormData };
+          delete updatedFormData[wo]; // Remove the specific WO
+          return updatedFormData;
+        });
       } else {
         toast.error("Failed to cancel");
       }
     });
   };
 
+  // const todayCompleteEle = todayComplete.map((item, index) => {
+  //   return (
+  //     <div key={index}>
+  //       <span>{item}</span>
+  //       <Button onClick={() => cancelHandler(item)}>Cancel</Button>
+  //     </div>
+  //   );
+  // });
+
   const todayCompleteEle = todayComplete.map((item, index) => {
+    const currentData = formData[item] || {
+      switch1: false,
+      switch2: false,
+      switch3: false,
+      comment: "",
+      start: null,
+      end: null,
+    };
+    const handleInputChange = (wo, field, value) => {
+      setFormData((prev) => ({
+        ...prev,
+        [wo]: {
+          ...prev[wo],
+          [field]: value,
+          start: field === "switch1" ? new Date() : currentData.start,
+          end: field === "switch3" ? new Date() : currentData.end,
+        },
+      }));
+    };
+
     return (
-      <div key={index}>
-        <span>{item}</span>
-        <Button onClick={() => cancelHandler(item)}>Cancel</Button>
+      <div
+        key={index}
+        style={{
+          marginBottom: "1rem",
+          border: "1px solid #ccc",
+          padding: "1rem",
+        }}
+      >
+        <div>
+          <h5>WO#: {item}</h5>
+          <Button onClick={() => cancelHandler(item)}>Cancel</Button>
+        </div>
+
+        <form className={styles.labelPattern}>
+          <label>
+            Part 1:
+            <input
+              type="checkbox"
+              checked={currentData.switch1}
+              onChange={(e) =>
+                handleInputChange(item, "switch1", e.target.checked)
+              }
+            />
+          </label>
+          <label>
+            Part 2:
+            <input
+              type="checkbox"
+              checked={currentData.switch2}
+              onChange={(e) =>
+                handleInputChange(item, "switch2", e.target.checked)
+              }
+            />
+          </label>
+          <label>
+            Part 3:
+            <input
+              type="checkbox"
+              checked={currentData.switch3}
+              onChange={(e) =>
+                handleInputChange(item, "switch3", e.target.checked)
+              }
+            />
+          </label>
+          <label>
+            Comment:
+            <input
+              type="text"
+              value={currentData.comment}
+              onChange={(e) =>
+                handleInputChange(item, "comment", e.target.value)
+              }
+            />
+          </label>
+
+          {/* Display the timestamps */}
+          <div>
+            <p>
+              <strong>Start Time:</strong>{" "}
+              {currentData.start ? currentData.start.toString() : "Not Set"}
+            </p>
+            <p>
+              <strong>End Time:</strong>{" "}
+              {currentData.end ? currentData.end.toString() : "Not Set"}
+            </p>
+          </div>
+        </form>
       </div>
     );
   });
+
+  const handleSubmit = async () => {
+    console.log(formData);
+    const consolidatedData = new FormData();
+
+    Object.entries(formData).forEach(([wo, data]) => {
+      consolidatedData.append(`${wo}_switch1`, data.switch1);
+      consolidatedData.append(`${wo}_switch2`, data.switch2);
+      consolidatedData.append(`${wo}_switch3`, data.switch3);
+      consolidatedData.append(`${wo}_comment`, data.comment);
+      consolidatedData.append(
+        `${wo}_start`,
+        data.start ? data.start.toISOString().substring(0, 19) : ""
+      );
+      consolidatedData.append(
+        `${wo}_end`,
+        data.end ? data.end.toISOString().substring(0, 19) : ""
+      );
+    });
+    console.log(consolidatedData);
+
+    try {
+      const response = await instance.post(
+        "/coreclamp/submit",
+        consolidatedData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      toast.success("Data submitted successfully!");
+    } catch (error) {
+      console.error("Error submitting form data:", error);
+      toast.error("Failed to submit data.");
+    }
+  };
 
   const completedDataSource = completedList?.map((item, index) => {
     const list = "";
@@ -114,9 +271,22 @@ function CoreClamp() {
   });
 
   const finishHandler = async (wo) => {
+    // initialize form data for the new wo if it doesn't already exist
+    // setFormData((prevFormData) => ({
+    //   ...prevFormData,
+    //   [wo]: prevFormData[wo] || {
+    //     switch1: false,
+    //     switch2: false,
+    //     switch3: false,
+    //     comment: "",
+    //     start: null,
+    //     end: null,
+    //   },
+    // }));
     setTodayComplete([...todayComplete, wo]);
     instance.post("/coreclamp/finish", { wo: wo }).then((res) => {
       if (res.data.data) {
+        toast(`${wo} completed`);
         const newList = ccList.filter((i) => i.wo !== wo);
         setCCList(newList);
       }
@@ -154,7 +324,10 @@ function CoreClamp() {
         </thead>
         <tbody>{dataSourceEle}</tbody>
       </table>
-      <h4>Finished Today</h4>
+      <div className={styles.finishToday}>
+        <h4>Finished Today</h4>
+        <Button onClick={handleSubmit}>Submit</Button>
+      </div>
       <div className={styles.todayCompleteContainer}>{todayCompleteEle}</div>
       <hr />
       <h4>History</h4>

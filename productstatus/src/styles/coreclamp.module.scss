@@ -19,6 +19,7 @@ p {
 
 .todayCompleteContainer {
   display: flex; // Use flexbox
+  flex-direction: column;
   flex-wrap: wrap; // Allow items to wrap to the next line if there's not enough space
   gap: 16px; // Add space between the items
 }
@@ -33,4 +34,16 @@ p {
   Button {
     margin-left: 1rem;
   }
+}
+
+.labelPattern {
+  display: flex; // Use flexbox
+  justify-content: space-around;
+  align-items: center; // Center the text vertically
+}
+
+.finishToday {
+  display: flex; // Use flexbox
+
+  align-items: end; //
 }

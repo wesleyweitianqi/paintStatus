@@ -26,3 +26,10 @@
     // margin-left: 22%;
   }
 }
+
+.headContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table } from "antd";
+import { Table, Button } from "antd";
 
 const PaintedTable = (props) => {
   const { list, handleDelete } = props;
@@ -11,22 +11,31 @@ const PaintedTable = (props) => {
       key: "wo",
     },
     {
-      title: "Painted",
-      dataIndex: "painted",
-      key: "painted",
-      render: (painted) => (painted ? "Yes" : "No"),
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
     },
     {
-      title: "CreatedAt",
-      dataIndex: "createdAt",
-      key: "createdAt",
+      title: "Qty",
+      dataIndex: "qty",
+      key: "qty",
+    },
+    {
+      title: "Moved To",
+      dataIndex: "movedTo",
+      key: "movedTo",
+    },
+    {
+      title: "Notes",
+      dataIndex: "notes",
+      key: "notes",
     },
     {
       title: "Action",
       dataIndex: "",
       key: "x",
       render: (record) => (
-        <button onClick={() => handleDelete(record.key)}>Delete</button>
+        <Button onClick={() => handleDelete(record.key)}>Delete</Button>
       ),
     },
   ];
@@ -37,7 +46,11 @@ const PaintedTable = (props) => {
       return {
         key: index + 1,
         wo: item.wo,
-        painted: item.painted !== undefined ? item.painted : false,
+        description: item.description,
+        qty: item.qty,
+        movedTo: item.movedTo,
+        notes: item.notes,
+
         createdAt: item.createdAt.toString().substring(0, 10),
       };
     });

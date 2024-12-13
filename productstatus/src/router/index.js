@@ -6,6 +6,7 @@ import Shipping from "../components/Shipping";
 import Powder from "../components/Powder";
 import CoreClamp from "../components/CoreClamp";
 import Shear from "../components/Shear";
+import Priority from "../components/Priority";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -21,6 +22,13 @@ const router = createBrowserRouter([
       {
         path: "/status",
         element: <Status />,
+        meta: {
+          title: "default",
+        },
+      },
+      {
+        path: "/priority",
+        element: <Priority />,
         meta: {
           title: "default",
         },

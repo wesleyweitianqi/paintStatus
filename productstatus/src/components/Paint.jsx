@@ -1,36 +1,34 @@
 import React, { useEffect, useState } from "react";
-import styles from "../styles/status.module.scss";
+import { Form, Input, Button, Row, Col } from "antd";
 import PaintedTable from "./PaintedTable.jsx";
+import { Link } from "react-router-dom";
 import instance from "../utils/http.js";
 import CurrentPaint from "./CurrentPaint.jsx";
+import styles from "../styles/painted.module.scss";
 
 const Status = () => {
-  const [wo, setWo] = useState("");
   const [list, setList] = useState([]);
-  const [isPainted, setIsPainted] = useState(false);
 
-  const handleWoChange = (e) => {
-    setWo(e.target.value);
-  };
-
-  const handleButtonClick = async () => {
+  const handleFinish = async (values) => {
     try {
-      const res = await instance.post("/paint", { wo, isPainted });
-      setList([...res.data.data]); // Create a new array using the spread operator
+      const res = await instance.post("/paint", values);
+      setList(res.data.data); // Update list with server response
     } catch (error) {
       console.error("Error submitting the request:", error);
     }
   };
-  const handleDelete = async (e) => {
-    const newList = [...list];
-    const item = newList.splice(e - 1, 1);
-    const deleteWo = item[0].wo;
-    await instance.post("/paint/delete", { deleteWo });
-    setList(newList);
-  };
 
-  const handleCheckboxChange = () => {
-    setIsPainted(!isPainted);
+  const handleDelete = async (index) => {
+    console.log(index);
+    try {
+      const newList = [...list];
+      console.log("🚀 ~ handleDelete ~ newList:", newList);
+      const [item] = newList.splice(index - 1, 1);
+      await instance.post("/paint/delete", { deleteWo: item.wo });
+      setList(newList);
+    } catch (error) {
+      console.error("Error deleting item:", error);
+    }
   };
 
   useEffect(() => {
@@ -40,38 +38,73 @@ const Status = () => {
         setList(res.data.data);
       })
       .catch((e) => {
-        console.log(e);
+        console.error(e);
       });
   }, []);
 
-  useEffect(() => {
-    // Perform actions after state is updated
-  }, [list]);
-
   return (
-    <div className={styles.statusContainer}>
-      <h3>Painted Parts Entry</h3>
-      <div className={styles.inputContainer}>
-        <input
-          type="text"
-          placeholder="please enter WO#"
-          value={wo}
-          onChange={handleWoChange}
-        />
-        <button onClick={handleButtonClick}>Submit</button>
+    <div>
+      <div className={styles.headContainer}>
+        <h4>Painted Parts Entry</h4>
+        <Link to="/priority">
+          <Button>To Priority List</Button>
+        </Link>
       </div>
-      <div className={styles.checkBoxContainer}>
-        <input
-          type="checkbox"
-          checked={isPainted}
-          onChange={handleCheckboxChange}
-        />
-        <label>Painted</label>
-      </div>
+      <Form
+        layout="vertical"
+        onFinish={handleFinish}
+        initialValues={{
+          wo: "",
+          description: "",
+          qty: "",
+          movedTo: "",
+          notes: "",
+        }}
+      >
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="WO#"
+              name="wo"
+              rules={[{ required: true, message: "Please enter WO#" }]}
+            >
+              <Input />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Description" name="description">
+              <Input />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="Quantity" name="qty">
+              <Input type="number" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Moved To" name="movedTo">
+              <Input />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item label="Notes" name="notes">
+          <Input />
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block>
+            Submit
+          </Button>
+        </Form.Item>
+      </Form>
+
       <hr />
+
       <h4>Current Paint</h4>
       <CurrentPaint />
-      <p>Painted List</p>
+
+      <h4>Painted List</h4>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>
   );

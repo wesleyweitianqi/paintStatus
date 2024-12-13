@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import styles from "../styles/status.module.scss";
+
 import PaintedTable from "./PaintedTable";
 import instance from "../utils/http";
 import { AppContext } from "../AppContext";

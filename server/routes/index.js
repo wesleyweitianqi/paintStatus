@@ -1,14 +1,12 @@
-var express = require('express');
+var express = require("express");
 var router = express.Router();
-const Status = require('../models/paintStatus');
+const Painted = require("../models/Painted");
 
 /* GET home page. */
-router.get('/', async (req, res, next) => {
-  res.render('index', { title: 'Express' });
+router.get("/", async (req, res, next) => {
+  res.render("index", { title: "Express" });
 });
 
-router.post("/", async (req, res, next) => {
-  
-})
+router.post("/", async (req, res, next) => {});
 
 module.exports = router;

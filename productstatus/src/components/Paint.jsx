@@ -1,16 +1,26 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Button, Row, Col } from "antd";
+import { Form, Input, Button, Row, Col, Select } from "antd";
 import PaintedTable from "./PaintedTable.jsx";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGear } from '@fortawesome/free-solid-svg-icons'; // or free-regular-svg-icons
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear } from "@fortawesome/free-solid-svg-icons"; // or free-regular-svg-icons
 
 import { Link } from "react-router-dom";
 import instance from "../utils/http.js";
 import CurrentPaint from "./CurrentPaint.jsx";
 import styles from "../styles/painted.module.scss";
+import { loadDescriptionList, loadLocationList } from "../utils/constants.js";
+const { Option } = Select;
 
 const Status = () => {
   const [list, setList] = useState([]);
+  const [descriptions, setDescriptions] = useState([]);
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    // Load descriptions and locations from constants.js
+    setDescriptions(loadDescriptionList());
+    setLocations(loadLocationList());
+  }, []);
 
   const handleFinish = async (values) => {
     try {
@@ -33,6 +43,13 @@ const Status = () => {
       console.error("Error deleting item:", error);
     }
   };
+  const saveTOExcel = ()=> {
+    instance.post("/paint/savetoexcel").then(res => {
+      if(res.data.code === 0){
+        alert(res.data.message)
+      }
+    })
+  }
 
   useEffect(() => {
     instance
@@ -51,11 +68,10 @@ const Status = () => {
         <h4>Painted Parts Entry</h4>
         <Link to="/priority">
           <Button>To Priority List</Button>
-        </Link >
-        <Link to="/setting">
-        <FontAwesomeIcon icon={faGear} />
         </Link>
-
+        <Link to="/setting">
+          <FontAwesomeIcon icon={faGear} size="2x" />
+        </Link>
       </div>
       <Form
         layout="vertical"
@@ -80,7 +96,13 @@ const Status = () => {
           </Col>
           <Col span={12}>
             <Form.Item label="Description" name="description">
-              <Input />
+              <Select placeholder="Select Description">
+                {descriptions.map((description, index) => (
+                  <Option key={index} value={description}>
+                    {description}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>
@@ -92,7 +114,13 @@ const Status = () => {
           </Col>
           <Col span={12}>
             <Form.Item label="Moved To" name="movedTo">
-              <Input />
+              <Select placeholder="Select Location">
+                {locations.map((location, index) => (
+                  <Option key={index} value={location}>
+                    {location}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>
@@ -110,8 +138,10 @@ const Status = () => {
 
       <h4>Current Paint</h4>
       <CurrentPaint />
-
-      <h4>Painted List</h4>
+      <div className={styles.headContainer}>
+        <h4>Painted List</h4>
+        <Button onClick={()=>saveTOExcel()}>Submit</Button>
+      </div>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>
   );

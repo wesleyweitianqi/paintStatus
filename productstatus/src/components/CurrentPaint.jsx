@@ -21,8 +21,9 @@ const CurrentPaint = () => {
     setCustomInput(e.target.value);
   };
   return (
+    <div style={{display: "flex", justifyContent: "flex-start"}}>
     <Radio.Group onChange={onChange} value={value}>
-      <Space direction="vertical">
+      <Space direction="vertical" style={{textAlign: "left"}}>
         <Radio value="ASA61 GREY">ASA61 GREY</Radio>
         <Radio value="WHITE">WHITE</Radio>
         <Radio value="REX BLACK">REX BLACK</Radio>
@@ -41,6 +42,8 @@ const CurrentPaint = () => {
         </Radio>
       </Space>
     </Radio.Group>
+
+    </div>
   );
 };
 export default CurrentPaint;

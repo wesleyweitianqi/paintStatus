@@ -7,7 +7,7 @@ import { AppProvider } from "./AppContext";
 
 function App() {
   useEffect(() => {
-    document.title = "Paint Status";
+    document.title = "Rex Operator Client";
   });
   return (
     <AppProvider>

@@ -134,7 +134,7 @@ router.post("/submit", async (req, res) => {
       ];
     });
     console.log(savedData);
-    const pythonProcess = spawn("python3", ["addData.py"]);
+    const pythonProcess = spawn("python", ["addData.py"]);
     pythonProcess.stdin.write(JSON.stringify(savedData));
     pythonProcess.stdin.end();
 

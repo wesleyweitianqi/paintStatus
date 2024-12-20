@@ -1,10 +1,12 @@
 from openpyxl import load_workbook 
 import json
 import sys
+import os
 
 def add_data_to_workbook(data):
 
-  file_path = '133form.xlsx'
+  # file_path = '133form.xlsx'
+  file_path = os.path.join("O:\\1. PERSONAL FOLDERS\\Wesley", "output.xlsx")
 
   try: 
     wb = load_workbook(file_path)
@@ -17,8 +19,10 @@ def add_data_to_workbook(data):
 
   for row in data:
     sheet.append(row);
+    
+  output_path = "O:\\1. PERSONAL FOLDERS\\Wesley";
+  wb.save(output_path + '\\output.xlsx')
 
-  wb.save('output.xlsx')
 
   print('files saved successfulli')
 

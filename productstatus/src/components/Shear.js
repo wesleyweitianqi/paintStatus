@@ -26,7 +26,7 @@ function Shear() {
   const fetchShearItems = () => {
     setLoading(true);
     axios
-      .get("https://localhost:8080/cutlist/cutorderlist")
+      .get("https://192.168.1.169:8080/cutlist/cutorderlist")
       .then((response) => {
         setShearItems(response.data.data || []);
         setLoading(false);
@@ -40,7 +40,7 @@ function Shear() {
   const handleFinishItem = async (orderId, sheetId) => {
     try {
       const response = await axios.post(
-        "https://localhost:8080/cutlist/finishitem",
+        "https://192.168.1.169:8080/cutlist/finishitem",
         {
           orderId,
           sheetId,

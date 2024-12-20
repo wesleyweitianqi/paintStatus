@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Form, Input, Button, Row, Col } from "antd";
 import PaintedTable from "./PaintedTable.jsx";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGear } from '@fortawesome/free-solid-svg-icons'; // or free-regular-svg-icons
+
 import { Link } from "react-router-dom";
 import instance from "../utils/http.js";
 import CurrentPaint from "./CurrentPaint.jsx";
@@ -48,7 +51,11 @@ const Status = () => {
         <h4>Painted Parts Entry</h4>
         <Link to="/priority">
           <Button>To Priority List</Button>
+        </Link >
+        <Link to="/setting">
+        <FontAwesomeIcon icon={faGear} />
         </Link>
+
       </div>
       <Form
         layout="vertical"

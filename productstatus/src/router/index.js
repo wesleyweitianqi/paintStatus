@@ -7,6 +7,9 @@ import Powder from "../components/Powder";
 import CoreClamp from "../components/CoreClamp";
 import Shear from "../components/Shear";
 import Priority from "../components/Priority";
+import Setting from "../components/Setting";
+
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -66,6 +69,13 @@ const router = createBrowserRouter([
         element: <Shear />,
         meta: {
           title: "coreclamp",
+        },
+      },
+      {
+        path: "/setting",
+        element: <Setting />,
+        meta: {
+          title: "setting",
         },
       },
     ],

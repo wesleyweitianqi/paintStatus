@@ -4,7 +4,7 @@ const ENV = process.env.NODE_ENV;
 const host =
   process.env.NODE_ENV === "production"
     ? "http://44.221.243.248:8081"
-    : "http://192.168.4.25:8082";
+    : "http://192.168.1.169:8082";
 
 const instance = axios.create({
   baseURL: host,

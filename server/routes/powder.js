@@ -17,13 +17,30 @@ router.post("/add", async (req, res) => {
     const powder = new Powder({
       code: code,
       qty: qty,
-      supplier: supplier,
-      desc: desc,
+     
     });
     await powder.save();
     const result = await Powder.find();
     console.log("🚀 ~ router.post ~ result:", result);
     res.send({ code: 0, data: result });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/update", async (req, res) => {
+  try {
+    console.log("🚀 ~ router.post ~ req.body", req.body);
+    const { code, qty, desc, supplier } = req.body;
+    const result = await Powder.findOneAndUpdate(
+      { code: code },
+      { qty: qty, supplier: supplier, desc: desc }
+    );
+    if (result) {
+      res.send({ code: 0, data: result });
+    } else {
+      res.send({ code: 1, data: false });
+    }
   } catch (e) {
     console.log(e);
   }

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Table } from "antd";
+import { Table, Button } from "antd";
 import instance from "../utils/http";
 import styles from "../styles/powder.module.scss";
-import CurrentPaint from "./CurrentPaint";
 
 const Powder = () => {
   const [list, setList] = useState([]);
+  const [editingKey, setEditingKey] = useState(null);
+  const [editQty, setEditQty] = useState("");
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ const Powder = () => {
         console.log(e);
       });
   }, []);
+
   const handleButtonClick = async (e) => {
     e.preventDefault();
     const formData = {
@@ -33,39 +35,13 @@ const Powder = () => {
           "Content-Type": "application/json",
         },
       });
-      setList([...res.data.data]); // Create a new array using the spread operator
+      setList([...res.data.data]);
       formRef.current.reset();
     } catch (error) {
       console.error("Error submitting the request:", error);
     }
   };
 
-  const columns = [
-    {
-      title: "Color Code",
-      dataIndex: "code",
-      key: "code",
-    },
-    {
-      title: "Description",
-      dataIndex: "desc",
-      key: "desc",
-      // render: (painted) => (painted ? "Yes" : "No"),
-    },
-    {
-      title: "Qty",
-      dataIndex: "qty",
-      key: "qty",
-    },
-    {
-      title: "Action",
-      dataIndex: "",
-      key: "x",
-      render: (record) => (
-        <button onClick={() => handleDelete(record.key)}>Delete</button>
-      ),
-    },
-  ];
   const handleDelete = async (key) => {
     const powderCode = list[key - 1].code;
     const result = await instance.post(
@@ -83,6 +59,92 @@ const Powder = () => {
       setList(newList);
     }
   };
+
+  const startEdit = (record) => {
+    setEditingKey(record.key);
+    setEditQty(record.qty);
+  };
+
+  const cancelEdit = () => {
+    setEditingKey(null);
+    setEditQty("");
+  };
+
+  const handleUpdate = async (record) => {
+    try {
+      const updatedData = {
+        code: record.code,
+        qty: editQty,
+        
+      };
+
+      const res = await instance.post("/powder/update", updatedData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (res.data.data) {
+        setList(res.data.data);
+        setEditingKey(null);
+        setEditQty("");
+      }
+    } catch (error) {
+      console.error("Error updating the item:", error);
+    }
+  };
+
+  const columns = [
+    {
+      title: "Color Code",
+      dataIndex: "code",
+      key: "code",
+    },
+    {
+      title: "Description",
+      dataIndex: "desc",
+      key: "desc",
+    },
+    {
+      title: "Qty",
+      dataIndex: "qty",
+      key: "qty",
+      render: (text, record) => {
+        if (editingKey === record.key) {
+          return (
+            <input
+              type="text"
+              value={editQty}
+              onChange={(e) => setEditQty(e.target.value)}
+              style={{ width: '100px' }}
+            />
+          );
+        }
+        return text;
+      }
+    },
+    {
+      title: "Action",
+      dataIndex: "",
+      key: "x",
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {editingKey === record.key ? (
+            <>
+              <Button onClick={() => handleUpdate(record)}>Save</Button>
+              <Button onClick={cancelEdit}>Cancel</Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={() => startEdit(record)}>Update</Button>
+              <Button danger onClick={() => handleDelete(record.key)}>Delete</Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   const data =
     Array.isArray(list) &&
     list.map((item, index) => {
@@ -91,6 +153,7 @@ const Powder = () => {
         code: item.code,
         desc: item.desc,
         qty: item.qty,
+        supplier: item.supplier,
       };
     });
 
@@ -132,35 +195,9 @@ const Powder = () => {
         </div>
         <button type="submit">Submit</button>
       </form>
-      <hr />
-      {/* <div className={styles.detail}>
-        <h4>Special paint requirement:</h4>
-        <p>
-          <li>Paint Chip</li>
-          <li>Gloss</li>
-          Note:
-        </p>
-        <p>Lead time: 2-3 weeks for match up</p>
-
-        <h4>Price</h4>
-        <ul>Special powder price: $35/kg. Minimum order: 25kg</ul>
-        <ul>Special spray can: $25/can. Minimum order: 12 can</ul>
-      </div> */}
       <Table
         columns={columns}
         rowKey={(record) => record.key}
-        expandable={{
-          expandedRowRender: (record) => (
-            <p
-              style={{
-                margin: 0,
-              }}
-            >
-              {record.description}
-            </p>
-          ),
-          rowExpandable: (record) => record.name !== "Not Expandable",
-        }}
         dataSource={data}
         pagination={false}
       />

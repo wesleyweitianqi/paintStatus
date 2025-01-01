@@ -9,7 +9,7 @@ const moment = require("moment-timezone");
 
 router.get("/", async (req, res, next) => {
   try {
-    const paintedList = await Painted.find().sort({createdAt: -1});
+    const paintedList = await Painted.find().sort({ createdAt: -1 });
     res.send({ code: 0, data: paintedList });
   } catch (e) {
     console.log(e);
@@ -27,7 +27,7 @@ router.post("/", async (req, res, next) => {
       notes: notes,
     });
     await paintedWo.save();
-    const list = await Painted.find().sort({createdAt: -1});
+    const list = await Painted.find().sort({ createdAt: -1 });
     res.send({ code: 0, data: list });
   } catch (e) {
     console.log(e);
@@ -50,7 +50,7 @@ router.post("/savetoexcel", async (req, res) => {
     const filePath = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
     const file = path.resolve(filePath, "painted.xlsx");
     let workbook;
-    
+
     if (fs.existsSync(file)) {
       workbook = xlsx.readFile(file);
     } else {
@@ -58,24 +58,26 @@ router.post("/savetoexcel", async (req, res) => {
     }
 
     // Set timezone to your local timezone (replace 'America/New_York' with your timezone)
-    const timezone = 'America/New_York';
-    const startTime = moment.tz(moment(), timezone).startOf('day').toDate();
-    const endTime = moment.tz(moment(), timezone).endOf('day').toDate();
+    const timezone = "America/New_York";
+    const startTime = moment.tz(moment(), timezone).startOf("day").toDate();
+    const endTime = moment.tz(moment(), timezone).endOf("day").toDate();
 
     const list = await Painted.find({
       createdAt: {
         $gte: startTime,
-        $lte: endTime
-      }
+        $lte: endTime,
+      },
     });
 
-    const appendData = list.map(item => ({
+    const appendData = list.map((item) => ({
       WO: item.wo,
       Description: item.description,
       Qty: item.qty,
       MovedTo: item.movedTo,
       Notes: item.notes,
-      CreatedAt: moment(item.createdAt).tz(timezone).format('YYYY-MM-DD HH:mm:ss'), // Format date consistently
+      CreatedAt: moment(item.createdAt)
+        .tz(timezone)
+        .format("YYYY-MM-DD HH:mm:ss"), // Format date consistently
     }));
 
     const sheetName = "PaintedList";
@@ -83,16 +85,22 @@ router.post("/savetoexcel", async (req, res) => {
 
     if (worksheet) {
       const existingData = xlsx.utils.sheet_to_json(worksheet);
-      
+
       // Remove duplicates based on WO and CreatedAt
-      const uniqueData = [...existingData, ...appendData].reduce((acc, current) => {
-        const x = acc.find(item => item.WO === current.WO && item.CreatedAt === current.CreatedAt);
-        if (!x) {
-          return acc.concat([current]);
-        } else {
-          return acc;
-        }
-      }, []);
+      const uniqueData = [...existingData, ...appendData].reduce(
+        (acc, current) => {
+          const x = acc.find(
+            (item) =>
+              item.WO === current.WO && item.CreatedAt === current.CreatedAt
+          );
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        },
+        []
+      );
 
       worksheet = xlsx.utils.json_to_sheet(uniqueData);
     } else {
@@ -109,7 +117,7 @@ router.post("/savetoexcel", async (req, res) => {
       { wch: 20 }, // CreatedAt
     ];
 
-    worksheet['!cols'] = cols;
+    worksheet["!cols"] = cols;
     workbook.Sheets[sheetName] = worksheet;
     xlsx.writeFile(workbook, file);
 
@@ -117,6 +125,31 @@ router.post("/savetoexcel", async (req, res) => {
   } catch (e) {
     console.log(e);
     res.send({ code: 1, message: "Error saving Excel file", error: e.message });
+  }
+});
+
+let currentPaint = "ASA61 GREY";
+
+router.get("/currentpaint", async (req, res) => {
+  try {
+    res.send({ code: 0, data: currentPaint });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/currentpaint", async (req, res) => {
+  try {
+    const { paint } = req.body;
+    currentPaint = paint;
+    res.send({ code: 0, message: "Current paint updated successfully" });
+  } catch (e) {
+    console.log(e);
+    res.send({
+      code: 1,
+      message: "Error updating current paint",
+      error: e.message,
+    });
   }
 });
 

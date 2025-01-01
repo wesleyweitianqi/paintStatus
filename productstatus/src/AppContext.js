@@ -1,16 +1,15 @@
 import React, { createContext, useState, useEffect } from "react";
-
+import instance from "../src/utils/http";
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const [currentPaint, setCurrentPaint] = useState(() => {
-    const savedData = localStorage.getItem("currentPaint");
-    return savedData ? JSON.parse(savedData) : 1;
-  });
+  const [currentPaint, setCurrentPaint] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem("currentPaint", JSON.stringify(currentPaint));
-  }, [currentPaint]);
+    instance.get("/paint/currentpaint").then((res) => {
+      setCurrentPaint(res.data);
+    });
+  }, []);
 
   return (
     <AppContext.Provider value={{ currentPaint, setCurrentPaint }}>

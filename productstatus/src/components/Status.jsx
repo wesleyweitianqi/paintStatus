@@ -6,16 +6,25 @@ import { AppContext } from "../AppContext";
 
 const Status = () => {
   const [todatCompleteCC, setTodayCompleteCC] = useState([]);
-  const { currentPaint } = useContext(AppContext);
+  const [currentPaint, setCurrentPaint] = useState("");
   const fetchTodayCompleteCC = async () => {
     const res = await instance.get("/coreclamp/todaycomplete");
-
     const ccArray = res.data.data.map((item) => item.wo);
     setTodayCompleteCC(ccArray);
   };
 
+  const fetchCurrentPaint = async () => {
+    try {
+      const res = await instance.get("/paint/currentpaint");
+      setCurrentPaint(res.data.data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
   useEffect(() => {
     fetchTodayCompleteCC();
+    fetchCurrentPaint();
   }, []);
   return (
     <div>

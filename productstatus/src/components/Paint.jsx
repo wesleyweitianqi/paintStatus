@@ -25,7 +25,7 @@ const Status = () => {
   const handleFinish = async (values) => {
     try {
       const res = await instance.post("/paint", values);
-      setList(res.data.data); // Update list with server response
+      setList(res.data.data);
     } catch (error) {
       console.error("Error submitting the request:", error);
     }
@@ -43,13 +43,13 @@ const Status = () => {
       console.error("Error deleting item:", error);
     }
   };
-  const saveTOExcel = ()=> {
-    instance.post("/paint/savetoexcel").then(res => {
-      if(res.data.code === 0){
-        alert(res.data.message)
+  const saveTOExcel = () => {
+    instance.post("/paint/savetoexcel").then((res) => {
+      if (res.data.code === 0) {
+        alert(res.data.message);
       }
-    })
-  }
+    });
+  };
 
   useEffect(() => {
     instance
@@ -140,7 +140,7 @@ const Status = () => {
       <CurrentPaint />
       <div className={styles.headContainer}>
         <h4>Painted List</h4>
-        <Button onClick={()=>saveTOExcel()}>Submit</Button>
+        <Button onClick={() => saveTOExcel()}>Submit</Button>
       </div>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>

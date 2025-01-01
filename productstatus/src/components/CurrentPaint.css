@@ -1,0 +1,130 @@
+.settings-container {
+  padding: 24px;
+  background: #fff;
+  min-height: 100%;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.settings-header h2 {
+  margin: 0;
+  color: #1f1f1f;
+  font-weight: 600;
+}
+
+.settings-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.settings-card {
+  height: 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03),
+              0 2px 4px rgba(0, 0, 0, 0.03),
+              0 4px 8px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card-icon {
+  font-size: 20px;
+  color: #1890ff;
+}
+
+.paint-radio-group {
+  width: 100%;
+}
+
+.paint-options {
+  width: 100%;
+}
+
+.paint-options .ant-radio-wrapper {
+  margin-right: 0;
+  padding: 8px 0;
+}
+
+.special-color-input {
+  margin-left: 8px;
+  width: 160px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.schedule-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.submit-button {
+  margin-top: 24px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .settings-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .schedule-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Hover effects */
+.settings-card:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05),
+              0 4px 8px rgba(0, 0, 0, 0.05),
+              0 8px 16px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.ant-radio-wrapper:hover {
+  background-color: rgba(24, 144, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Animation */
+.settings-card {
+  transition: all 0.3s ease;
+}
+
+/* Custom scrollbar */
+.settings-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-container::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.settings-container::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.settings-container::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+} 

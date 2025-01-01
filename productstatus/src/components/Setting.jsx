@@ -1,12 +1,31 @@
 import React, { useState, useEffect } from "react";
 import {
+  Card,
+  Input,
+  Button,
+  List,
+  Typography,
+  Divider,
+  message,
+  Tooltip,
+} from "antd";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  EnvironmentOutlined,
+  FileTextOutlined,
+} from "@ant-design/icons";
+import {
   loadDescriptionList,
   loadLocationList,
   addDescription,
   removeDescription,
   addLocation,
-  removeLocation
+  removeLocation,
 } from "../utils/constants";
+import "./Setting.css";
+
+const { Title, Text } = Typography;
 
 const Setting = () => {
   const [descriptions, setDescriptions] = useState(loadDescriptionList());
@@ -14,96 +33,147 @@ const Setting = () => {
   const [newDescription, setNewDescription] = useState("");
   const [newLocation, setNewLocation] = useState("");
 
-  // Update lists when changes happen
   useEffect(() => {
     setDescriptions(loadDescriptionList());
     setLocations(loadLocationList());
   }, []);
 
-  // Add new description
   const handleAddDescription = () => {
     if (newDescription.trim() && !descriptions.includes(newDescription)) {
       addDescription(newDescription);
-      setDescriptions(loadDescriptionList());  // Refresh the list from localStorage
+      setDescriptions(loadDescriptionList());
       setNewDescription("");
+      message.success("Description added successfully");
+    } else if (descriptions.includes(newDescription)) {
+      message.error("This description already exists");
     }
   };
 
-  // Delete description
   const handleDeleteDescription = (description) => {
     removeDescription(description);
-    setDescriptions(loadDescriptionList());  // Refresh the list from localStorage
+    setDescriptions(loadDescriptionList());
+    message.success("Description removed successfully");
   };
 
-  // Add new location
   const handleAddLocation = () => {
     if (newLocation.trim() && !locations.includes(newLocation)) {
       addLocation(newLocation);
-      setLocations(loadLocationList());  // Refresh the list from localStorage
+      setLocations(loadLocationList());
       setNewLocation("");
+      message.success("Location added successfully");
+    } else if (locations.includes(newLocation)) {
+      message.error("This location already exists");
     }
   };
 
-  // Delete location
   const handleDeleteLocation = (location) => {
     removeLocation(location);
-    setLocations(loadLocationList());  // Refresh the list from localStorage
+    setLocations(loadLocationList());
+    message.success("Location removed successfully");
   };
 
   return (
-    <div>
-      <h4>Setting</h4>
+    <div className="settings-page">
+      <Title level={2} className="settings-title">
+        System Settings
+      </Title>
 
-      {/* Description Section */}
-      <div>
-        <p>Description Collection</p>
-        <ul>
-          {descriptions.map((description, index) => (
-            <li key={index}>
-              {description}
-              <button
-                onClick={() => handleDeleteDescription(description)}
-                style={{ marginLeft: "10px", color: "red" }}
+      <div className="settings-grid">
+        <Card
+          className="settings-card"
+          title={
+            <div className="card-title">
+              <FileTextOutlined className="card-icon" />
+              <span>Description Collection</span>
+            </div>
+          }
+        >
+          <div className="input-group">
+            <Input
+              placeholder="Add new description"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              onPressEnter={handleAddDescription}
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddDescription}
+            >
+              Add
+            </Button>
+          </div>
+
+          <List
+            className="settings-list"
+            dataSource={descriptions}
+            renderItem={(description) => (
+              <List.Item
+                className="list-item"
+                actions={[
+                  <Tooltip title="Delete">
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDeleteDescription(description)}
+                    />
+                  </Tooltip>,
+                ]}
               >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-        <input
-          type="text"
-          placeholder="Add new description"
-          value={newDescription}
-          onChange={(e) => setNewDescription(e.target.value)}
-        />
-        <button onClick={handleAddDescription}>Add</button>
-      </div>
+                <Text>{description}</Text>
+              </List.Item>
+            )}
+          />
+        </Card>
 
-      <hr />
+        <Card
+          className="settings-card"
+          title={
+            <div className="card-title">
+              <EnvironmentOutlined className="card-icon" />
+              <span>Location Collection</span>
+            </div>
+          }
+        >
+          <div className="input-group">
+            <Input
+              placeholder="Add new location"
+              value={newLocation}
+              onChange={(e) => setNewLocation(e.target.value)}
+              onPressEnter={handleAddLocation}
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddLocation}
+            >
+              Add
+            </Button>
+          </div>
 
-      {/* Location Section */}
-      <div>
-        <p>Location Collection</p>
-        <ul>
-          {locations.map((location, index) => (
-            <li key={index}>
-              {location}
-              <button
-                onClick={() => handleDeleteLocation(location)}
-                style={{ marginLeft: "10px", color: "red" }}
+          <List
+            className="settings-list"
+            dataSource={locations}
+            renderItem={(location) => (
+              <List.Item
+                className="list-item"
+                actions={[
+                  <Tooltip title="Delete">
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDeleteLocation(location)}
+                    />
+                  </Tooltip>,
+                ]}
               >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-        <input
-          type="text"
-          placeholder="Add new location"
-          value={newLocation}
-          onChange={(e) => setNewLocation(e.target.value)}
-        />
-        <button onClick={handleAddLocation}>Add</button>
+                <Text>{location}</Text>
+              </List.Item>
+            )}
+          />
+        </Card>
       </div>
     </div>
   );

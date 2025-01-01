@@ -1,10 +1,10 @@
 import axios from "axios";
 
 const ENV = process.env.REACT_APP_NODE_ENV;
-const host =
-  ENV === "production"
-    ? "http://192.168.4.25:8082"
-    : "http://192.168.1.169:8082";
+console.log("🚀 ~ ENV:", ENV);
+const url = process.env.REACT_APP_API_URL;
+console.log("🚀 ~ url:", url);
+const host = ENV === "production" ? url : "http://192.168.1.169:8082";
 const instance = axios.create({
   baseURL: host,
   timeout: "5000s",

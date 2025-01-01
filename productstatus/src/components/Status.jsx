@@ -7,6 +7,7 @@ import { AppContext } from "../AppContext";
 const Status = () => {
   const [todatCompleteCC, setTodayCompleteCC] = useState([]);
   const [currentPaint, setCurrentPaint] = useState("");
+  const [schedule, setSchedule] = useState({});
   const fetchTodayCompleteCC = async () => {
     const res = await instance.get("/coreclamp/todaycomplete");
     const ccArray = res.data.data.map((item) => item.wo);
@@ -22,9 +23,15 @@ const Status = () => {
     }
   };
 
+  const fetchSchedule = async () => {
+    const res = await instance.get("/paint/schedule");
+    setSchedule(res.data.data);
+  };
+
   useEffect(() => {
     fetchTodayCompleteCC();
     fetchCurrentPaint();
+    fetchSchedule();
   }, []);
   return (
     <div>
@@ -42,11 +49,18 @@ const Status = () => {
             <th scope="col">Wednesday</th>
             <th scope="col">Thursday</th>
             <th scope="col">Friday</th>
-            <th scope="col">Saturday</th>
             {/* <th scope="col">Action</th> */}
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+          <tr>
+            <td>{schedule.Monday}</td>
+            <td>{schedule.Tuesday}</td>
+            <td>{schedule.Wednesday}</td>
+            <td>{schedule.Thursday}</td>
+            <td>{schedule.Friday}</td>
+          </tr>
+        </tbody>
       </table>
       <h4>Core clamps cutting today</h4>
       <p>{todatCompleteCC.join(", ")}</p>

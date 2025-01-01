@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const CoreClamp = require("../models/coreclamp");
 const { spawn } = require("child_process");
+const fs = require("fs");
+const xlsx = require("xlsx");
+const path = require("path");
+const moment = require("moment-timezone");
 
 router.get("/list", async (req, res) => {
   console.log("get list");
@@ -165,6 +169,85 @@ router.post("/submit", async (req, res) => {
   } catch (e) {
     console.log(e);
     res.status(400).json({ message: error.message });
+  }
+});
+
+router.post("/savetoexcel", async (req, res) => {
+  try {
+    const filePath = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
+    const file = path.resolve(filePath, "coreclamps.xlsx");
+    let workbook;
+
+    if (fs.existsSync(file)) {
+      workbook = xlsx.readFile(file);
+    } else {
+      workbook = xlsx.utils.book_new();
+    }
+
+    // Set timezone to your local timezone
+    const timezone = "America/New_York";
+    const startTime = moment.tz(moment(), timezone).startOf("day").toDate();
+    const endTime = moment.tz(moment(), timezone).endOf("day").toDate();
+
+    const list = await CoreClamps.find({
+      createdAt: {
+        $gte: startTime,
+        $lte: endTime,
+      },
+    });
+
+    const appendData = list.map((item) => ({
+      WO: item.wo,
+      Description: item.description,
+      Qty: item.qty,
+      CreatedAt: moment(item.createdAt)
+        .tz(timezone)
+        .format("YYYY-MM-DD HH:mm:ss"),
+    }));
+
+    const sheetName = "CoreClampsList";
+    let worksheet = workbook.Sheets[sheetName];
+
+    if (worksheet) {
+      const existingData = xlsx.utils.sheet_to_json(worksheet);
+
+      // Remove duplicates based on WO and CreatedAt
+      const uniqueData = [...existingData, ...appendData].reduce(
+        (acc, current) => {
+          const x = acc.find(
+            (item) =>
+              item.WO === current.WO && item.CreatedAt === current.CreatedAt
+          );
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        },
+        []
+      );
+
+      worksheet = xlsx.utils.json_to_sheet(uniqueData);
+    } else {
+      worksheet = xlsx.utils.json_to_sheet(appendData);
+    }
+
+    // Add column width specifications
+    const cols = [
+      { wch: 15 }, // WO
+      { wch: 30 }, // Description
+      { wch: 10 }, // Qty
+      { wch: 20 }, // CreatedAt
+    ];
+
+    worksheet["!cols"] = cols;
+    workbook.Sheets[sheetName] = worksheet;
+    xlsx.writeFile(workbook, file);
+
+    res.send({ code: 0, message: "Excel file saved successfully" });
+  } catch (e) {
+    console.log(e);
+    res.send({ code: 1, message: "Error saving Excel file", error: e.message });
   }
 });
 

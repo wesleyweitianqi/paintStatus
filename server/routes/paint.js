@@ -153,4 +153,32 @@ router.post("/currentpaint", async (req, res) => {
   }
 });
 
+let schedule = {
+  Monday: "ASA61 GREY",
+  Tuesday: "ASA61 GREY",
+  Wednesday: "ASA61 GREY",
+  Thursday: "ASA61 GREY",
+  Friday: "ASA61 GREY",
+};
+
+router.get("/schedule", async (req, res) => {
+  try {
+    res.send({ code: 0, data: schedule });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/schedule", async (req, res) => {
+  try {
+    const newSchedule = req.body;
+    Object.keys(newSchedule).forEach((key) => {
+      schedule[key] = newSchedule[key];
+    });
+    res.send({ code: 0, message: "Schedule updated successfully" });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
 module.exports = router;

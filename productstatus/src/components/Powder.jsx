@@ -16,12 +16,13 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import instance from "../utils/http";
-import "./Powder.css";
+import styles from "../styles/powder.module.scss";
 
 const { Title } = Typography;
 
 const Powder = () => {
   const [list, setList] = useState([]);
+  console.log("🚀 ~ Powder ~ list:", list);
   const [editingKey, setEditingKey] = useState(null);
   const [editQty, setEditQty] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,8 +55,12 @@ const Powder = () => {
     };
 
     try {
-      const res = await instance.post("/powder/add", formData);
-      setList([...res.data.data]);
+      const res = await instance.post("/powder/add", formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      setList((prev) => [...prev, formData]);
       formRef.current.reset();
       message.success("Powder added successfully");
     } catch (error) {
@@ -199,61 +204,51 @@ const Powder = () => {
     }));
 
   return (
-    <div className="powder-container">
-      <div className="powder-header">
-        <Title level={2}>Powder Inventory</Title>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={fetchPowderList}
-          className="refresh-button"
-        >
-          Refresh
-        </Button>
-      </div>
-
-      <Card className="add-powder-card">
-        <form
-          ref={formRef}
-          onSubmit={handleButtonClick}
-          className="powder-form"
-        >
-          <div className="form-row">
-            <div className="form-item">
-              <label>Code#</label>
-              <Input placeholder="Powder code" name="code" />
-            </div>
-            <div className="form-item">
-              <label>Qty</label>
-              <Input placeholder="Quantity" name="qty" />
-            </div>
-            <div className="form-item">
-              <label>Description</label>
-              <Input placeholder="Description" name="desc" />
-            </div>
-            <div className="form-item">
-              <label>Supplier</label>
-              <Select defaultValue="sw" name="supplier">
-                <Select.Option value="sw">Sherwin William</Select.Option>
-                <Select.Option value="Tiger">Tiger</Select.Option>
-                <Select.Option value="Prism">Prism</Select.Option>
-              </Select>
-            </div>
+    <div>
+      <h4>Powder Inventory</h4>
+      <form
+        className={styles.powderForm}
+        ref={formRef}
+        // onSubmit={handleButtonClick}
+      >
+        <div className="col-2">
+          <div className="row">
+            <label>Code#</label>
+            <input type="text" placeholder="powder code" name="code" />
           </div>
-          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-            Add Powder
-          </Button>
-        </form>
-      </Card>
-
-      <Card className="powder-table-card">
-        <Table
-          columns={columns}
-          dataSource={data}
-          pagination={false}
-          loading={loading}
-          scroll={{ x: 800, y: 500 }}
-        />
-      </Card>
+        </div>
+        <div className="col-2">
+          <div className="row">
+            <label>Qty</label>
+            <input type="text" placeholder="qty" name="qty" />
+          </div>
+        </div>
+        <div className="col-2">
+          <div className="row">
+            <label>Description</label>
+            <input type="text" placeholder="desc" name="desc" />
+          </div>
+        </div>
+        <div className="col-2">
+          <div className="row">
+            <label>Supplier</label>
+            <select id="supplier" name="supplier">
+              <option value="sw">Sherwin William</option>
+              <option value="Tiger">Tiger</option>
+              <option value="Prism">prism</option>
+            </select>
+          </div>
+        </div>
+        <Button color="default" type="primary" onClick={handleButtonClick}>
+          Submit
+        </Button>
+      </form>
+      <Table
+        columns={columns}
+        rowKey={(record) => record.key}
+        dataSource={data}
+        pagination={false}
+      />
     </div>
   );
 };

@@ -19,6 +19,7 @@ function CoreClamp() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
 
+
   const [completedList, setCompletedList] = useState([]);
   const host = "https://192.168.1.169:8080";
 
@@ -41,29 +42,22 @@ function CoreClamp() {
     });
     instance.get("/coreclamp/todaycomplete").then((res) => {
       const data = res.data.data;
-      const arr = data.map((item) => item.wo);
-
-      setTodayComplete(arr);
+      setTodayComplete(data);
     });
   }, []);
 
   useEffect(() => {
-    // Initialize formData with default values for each item in todayComplete
     const initialFormData = todayComplete.reduce((acc, item) => {
-      if (!acc[item]) {
-        acc[item] = {
-          switch1: false,
-          switch2: false,
-          switch3: false,
+      if (!acc[item.wo]) {
+        acc[item.wo] = {
           comment: "",
-          start: null,
-          end: null,
+          completedAt: "",
         };
       }
       return acc;
     }, {});
 
-    setFormData(initialFormData); // Update formData with defaults
+    setFormData(initialFormData);
   }, [todayComplete]);
 
   const dataSource = isSearchFocused ? searchResult : ccList;
@@ -112,12 +106,12 @@ function CoreClamp() {
     instance.post("/coreclamp/cancel", { wo: wo }).then((res) => {
       console.log(res.data.data);
       if (res.data.data) {
-        const newList = todayComplete.filter((i) => i !== wo);
+        const newList = todayComplete.filter((i) => i.wo !== wo);
         setTodayComplete(newList);
         fetchCCList();
         setFormData((prevFormData) => {
           const updatedFormData = { ...prevFormData };
-          delete updatedFormData[wo]; // Remove the specific WO
+          delete updatedFormData[wo];
           return updatedFormData;
         });
       } else {
@@ -126,142 +120,90 @@ function CoreClamp() {
     });
   };
 
-  // const todayCompleteEle = todayComplete.map((item, index) => {
-  //   return (
-  //     <div key={index}>
-  //       <span>{item}</span>
-  //       <Button onClick={() => cancelHandler(item)}>Cancel</Button>
-  //     </div>
-  //   );
-  // });
+  // Helper function to format date with time
+  const formatDateTime = (date) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
 
-  const todayCompleteEle = todayComplete.map((item, index) => {
-    const currentData = formData[item] || {
-      switch1: false,
-      switch2: false,
-      switch3: false,
-      comment: "",
-      start: null,
-      end: null,
-    };
-    const handleInputChange = (wo, field, value) => {
-      setFormData((prev) => ({
-        ...prev,
-        [wo]: {
-          ...prev[wo],
-          [field]: value,
-          start: field === "switch1" ? new Date() : currentData.start,
-          end: field === "switch3" ? new Date() : currentData.end,
-        },
-      }));
-    };
+  // Helper function to format date for datetime-local input
+  const formatDateTimeForInput = (date) => {
+    return new Date(date).toISOString().slice(0, 19);
+  };
 
-    return (
-      <div
-        key={index}
-        style={{
-          marginBottom: "1rem",
-          border: "1px solid #ccc",
-          padding: "1rem",
-        }}
-      >
-        <div>
-          <h5>WO#: {item}</h5>
-          <Button onClick={() => cancelHandler(item)}>Cancel</Button>
-        </div>
-
-        <form className={styles.labelPattern}>
-          <label>
-            Part 1:
-            <input
-              type="checkbox"
-              checked={currentData.switch1}
-              onChange={(e) =>
-                handleInputChange(item, "switch1", e.target.checked)
-              }
-            />
-          </label>
-          <label>
-            Part 2:
-            <input
-              type="checkbox"
-              checked={currentData.switch2}
-              onChange={(e) =>
-                handleInputChange(item, "switch2", e.target.checked)
-              }
-            />
-          </label>
-          <label>
-            Part 3:
-            <input
-              type="checkbox"
-              checked={currentData.switch3}
-              onChange={(e) =>
-                handleInputChange(item, "switch3", e.target.checked)
-              }
-            />
-          </label>
-          <label>
-            Comment:
-            <input
-              type="text"
-              value={currentData.comment}
-              onChange={(e) =>
-                handleInputChange(item, "comment", e.target.value)
-              }
-            />
-          </label>
-
-          {/* Display the timestamps */}
-          <div>
-            <p>
-              <strong>Start Time:</strong>{" "}
-              {currentData.start ? currentData.start.toString() : "Not Set"}
-            </p>
-            <p>
-              <strong>End Time:</strong>{" "}
-              {currentData.end ? currentData.end.toString() : "Not Set"}
-            </p>
-          </div>
-        </form>
-      </div>
-    );
-  });
+  const todayCompleteEle = (
+    <table className="table">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">CoreClamp WO#</th>
+          <th scope="col">Quantity</th>
+          <th scope="col">Completed Time</th>
+          <th scope="col">Comment</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {todayComplete.map((item, index) => (
+          <tr key={item.wo}>
+            <th scope="row">{index + 1}</th>
+            <td>{item.wo}</td>
+            <td>{item.qty}</td>
+            <td>{formatDateTime(item.updatedAt)}</td>
+            <td>
+              <input
+                type="text"
+                value={formData[item.wo]?.comment || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    [item.wo]: {
+                      ...prev[item.wo],
+                      comment: e.target.value,
+                    },
+                  }))
+                }
+              />
+            </td>
+            <td>
+              <Button 
+                variant="warning"
+                onClick={() => cancelHandler(item.wo)}
+              >
+                Cancel
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   const handleSubmit = async () => {
-    console.log(formData);
-    const consolidatedData = new FormData();
-
-    Object.entries(formData).forEach(([wo, data]) => {
-      consolidatedData.append(`${wo}_switch1`, data.switch1);
-      consolidatedData.append(`${wo}_switch2`, data.switch2);
-      consolidatedData.append(`${wo}_switch3`, data.switch3);
-      consolidatedData.append(`${wo}_comment`, data.comment);
-      consolidatedData.append(
-        `${wo}_start`,
-        data.start ? data.start.toISOString().substring(0, 19) : ""
-      );
-      consolidatedData.append(
-        `${wo}_end`,
-        data.end ? data.end.toISOString().substring(0, 19) : ""
-      );
-    });
-    console.log(consolidatedData);
+    // Prepare data for all completed items
+    const submissionData = todayComplete.map(item => ({
+      wo: item.wo,
+      qty: item.qty,
+      completedAt: item.completedAt || formData[item.wo]?.completedAt,
+      comment: formData[item.wo]?.comment || ''
+    }));
 
     try {
-      const response = await instance.post(
-        "/coreclamp/submit",
-        consolidatedData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      toast.success("Data submitted successfully!");
+      const response = await instance.post("/coreclamp/savetoexcel", submissionData);
+      if (response.data.code === 0) {
+        toast.success("Data saved to Excel successfully!");
+      } else {
+        toast.error("Failed to save data to Excel");
+      }
     } catch (error) {
-      console.error("Error submitting form data:", error);
-      toast.error("Failed to submit data.");
+      console.error("Error saving to Excel:", error);
+      toast.error("Failed to save data to Excel");
     }
   };
 
@@ -271,26 +213,29 @@ function CoreClamp() {
   });
 
   const finishHandler = async (wo) => {
-    // initialize form data for the new wo if it doesn't already exist
-    // setFormData((prevFormData) => ({
-    //   ...prevFormData,
-    //   [wo]: prevFormData[wo] || {
-    //     switch1: false,
-    //     switch2: false,
-    //     switch3: false,
-    //     comment: "",
-    //     start: null,
-    //     end: null,
-    //   },
-    // }));
-    setTodayComplete([...todayComplete, wo]);
-    instance.post("/coreclamp/finish", { wo: wo }).then((res) => {
-      if (res.data.data) {
-        toast(`${wo} completed`);
-        const newList = ccList.filter((i) => i.wo !== wo);
-        setCCList(newList);
+    try {
+      const response = await instance.post("/coreclamp/finish", { wo: wo });
+      
+      if (response.data.code === 0) {
+        const savedData = response.data.data;
+        toast.success(`${wo} completed`);
+        
+        // Update the lists
+        fetchCCList();
+        
+        // Update completed list
+        setTodayComplete(prev => {
+          const newList = [...prev];
+          newList.unshift(savedData); // Add new item at the beginning
+          return newList;
+        });
+      } else {
+        toast.error("Failed to complete item");
       }
-    });
+    } catch (error) {
+      console.error("Error completing item:", error);
+      toast.error("Failed to complete item");
+    }
   };
 
   return (

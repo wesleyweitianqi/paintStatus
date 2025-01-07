@@ -80,7 +80,7 @@ router.post("/savetoexcel", async (req, res) => {
         .format("YYYY-MM-DD HH:mm:ss"), // Format date consistently
     }));
 
-    const sheetName = "PaintedList";
+    const sheetName = "Sheet1";
     let worksheet = workbook.Sheets[sheetName];
 
     if (worksheet) {
@@ -102,6 +102,7 @@ router.post("/savetoexcel", async (req, res) => {
         []
       );
 
+
       worksheet = xlsx.utils.json_to_sheet(uniqueData);
     } else {
       worksheet = xlsx.utils.json_to_sheet(appendData);
@@ -119,7 +120,15 @@ router.post("/savetoexcel", async (req, res) => {
 
     worksheet["!cols"] = cols;
     workbook.Sheets[sheetName] = worksheet;
-    xlsx.writeFile(workbook, file);
+
+    //to avoid loading error while file is open, add timestamp
+
+    
+    const today = moment.tz(moment(), timezone).format('YYYY-MM-DD');
+    const filePath1 = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
+    const newFile = path.resolve(filePath1, `painted_${today}.xlsx`);
+
+    xlsx.writeFile(workbook, newFile);
 
     res.send({ code: 0, message: "Excel file saved successfully" });
   } catch (e) {

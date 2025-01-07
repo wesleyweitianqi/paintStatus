@@ -142,6 +142,7 @@ const Status = () => {
         <h4>Painted List</h4>
         <Button onClick={() => saveTOExcel()}>Submit</Button>
       </div>
+      <p>You will find the excel record at: <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong></p>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>
   );

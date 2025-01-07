@@ -27,18 +27,21 @@ router.get("/list", async (req, res) => {
 router.post("/finish", async (req, res) => {
   try {
     const { wo } = req.body;
+    
     const result = await CoreClamp.findOneAndUpdate(
       { wo: wo },
-      { isComplete: true }
+      { isComplete: true },
+      { new: true }
     );
+
     if (result) {
-      res.send({ code: 0, data: true });
-      return;
+      res.send({ code: 0, data: result });
     } else {
       res.send({ code: 1, data: false });
     }
   } catch (err) {
     console.log(err);
+    res.status(500).send({ code: 1, message: err });
   }
 });
 
@@ -46,16 +49,13 @@ router.get("/todaycomplete", async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
     const result = await CoreClamp.find({
       isComplete: true,
-      updatedAt: { $gte: today },
-    });
-    if (result) {
-      res.send({ code: 0, data: result });
-      return;
-    } else {
-      res.send({ code: 1, data: false });
-    }
+      updatedAt: { $gte: today }
+    }).sort({ updatedAt: -1 });
+
+    res.send({ code: 0, data: result });
   } catch (err) {
     res.status(500).send({ code: 1, message: err });
   }
@@ -95,11 +95,12 @@ router.post("/cancel", async (req, res) => {
     const { wo } = req.body;
     const result = await CoreClamp.findOneAndUpdate(
       { wo: wo },
-      { isComplete: false }
+      { isComplete: false },
+      { new: true }
     );
+
     if (result) {
       res.send({ code: 0, data: true });
-      return;
     } else {
       res.send({ code: 1, data: false });
     }
@@ -184,39 +185,31 @@ router.post("/savetoexcel", async (req, res) => {
       workbook = xlsx.utils.book_new();
     }
 
-    // Set timezone to your local timezone
     const timezone = "America/New_York";
-    const startTime = moment.tz(moment(), timezone).startOf("day").toDate();
-    const endTime = moment.tz(moment(), timezone).endOf("day").toDate();
-
-    const list = await CoreClamps.find({
-      createdAt: {
-        $gte: startTime,
-        $lte: endTime,
-      },
-    });
-
-    const appendData = list.map((item) => ({
+    
+    // Format the received data
+    const appendData = req.body.map((item) => ({
       WO: item.wo,
-      Description: item.description,
-      Qty: item.qty,
-      CreatedAt: moment(item.createdAt)
+      Quantity: item.qty,
+      CompletedTime: moment(item.completedAt)
         .tz(timezone)
         .format("YYYY-MM-DD HH:mm:ss"),
+      Comment: item.comment || ''
     }));
-
-    const sheetName = "CoreClampsList";
+  
+    const sheetName = "Sheet1";
     let worksheet = workbook.Sheets[sheetName];
 
     if (worksheet) {
       const existingData = xlsx.utils.sheet_to_json(worksheet);
 
-      // Remove duplicates based on WO and CreatedAt
+      // Remove duplicates based on WO and CompletedTime
       const uniqueData = [...existingData, ...appendData].reduce(
         (acc, current) => {
           const x = acc.find(
             (item) =>
-              item.WO === current.WO && item.CreatedAt === current.CreatedAt
+              item.WO === current.WO && 
+              item.CompletedTime === current.CompletedTime
           );
           if (!x) {
             return acc.concat([current]);
@@ -234,10 +227,10 @@ router.post("/savetoexcel", async (req, res) => {
 
     // Add column width specifications
     const cols = [
-      { wch: 15 }, // WO
-      { wch: 30 }, // Description
-      { wch: 10 }, // Qty
-      { wch: 20 }, // CreatedAt
+      { wch: 15 },  // WO
+      { wch: 10 },  // Quantity
+      { wch: 20 },  // CompletedTime
+      { wch: 40 },  // Comment
     ];
 
     worksheet["!cols"] = cols;
@@ -250,5 +243,6 @@ router.post("/savetoexcel", async (req, res) => {
     res.send({ code: 1, message: "Error saving Excel file", error: e.message });
   }
 });
+  
 
 module.exports = router;

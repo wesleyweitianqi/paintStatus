@@ -1,12 +1,12 @@
 var express = require("express");
 var router = express.Router();
-const Painted = require("../models/Painted");
+const Painted = require("../models/painted");
 const { createDocumentRegistry } = require("typescript");
 const fs = require("fs");
 const xlsx = require("xlsx");
 const path = require("path");
 const moment = require("moment-timezone");
-
+const PaintPriority = require("../models/paintPriority");
 router.get("/", async (req, res, next) => {
   try {
     const paintedList = await Painted.find().sort({ createdAt: -1 });
@@ -25,6 +25,7 @@ router.post("/", async (req, res, next) => {
       qty: qty,
       movedTo: movedTo,
       notes: notes,
+      complete: true,
     });
     await paintedWo.save();
     const list = await Painted.find().sort({ createdAt: -1 });
@@ -102,7 +103,6 @@ router.post("/savetoexcel", async (req, res) => {
         []
       );
 
-
       worksheet = xlsx.utils.json_to_sheet(uniqueData);
     } else {
       worksheet = xlsx.utils.json_to_sheet(appendData);
@@ -123,8 +123,7 @@ router.post("/savetoexcel", async (req, res) => {
 
     //to avoid loading error while file is open, add timestamp
 
-    
-    const today = moment.tz(moment(), timezone).format('YYYY-MM-DD');
+    const today = moment.tz(moment(), timezone).format("YYYY-MM-DD");
     const filePath1 = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
     const newFile = path.resolve(filePath1, `painted_${today}.xlsx`);
 
@@ -185,6 +184,52 @@ router.post("/schedule", async (req, res) => {
       schedule[key] = newSchedule[key];
     });
     res.send({ code: 0, message: "Schedule updated successfully" });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.get("/getpaintjob", async (req, res) => {
+  try {
+    const paintJobs = await PaintPriority.find({ complete: false }).exec();
+    res.send({ code: 0, data: paintJobs });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/updatepaintjob", async (req, res) => {
+  try {
+    const { wo } = req.body;
+    console.log("🚀 ~ router.post ~ wo:", wo);
+    const result = await PaintPriority.findOneAndUpdate(
+      { wo: wo },
+      { $set: { complete: true } }, // Make sure field name matches your schema
+      {
+        new: true, // Return the updated document
+        runValidators: true, // Run schema validators
+      }
+    );
+    if (result) {
+      //insert the result into painted
+      const painted = await new Painted({
+        wo: result.wo,
+        description: result.description,
+        qty: result.qty,
+        movedTo: result.movedTo,
+        notes: result.notes,
+        complete: true,
+      });
+      await painted.save();
+      const paintJobs = await PaintPriority.find({ complete: false }).exec();
+      res.send({
+        code: 0,
+        message: "Paint job updated successfully",
+        data: paintJobs,
+      });
+    } else {
+      res.send({ code: 1, message: "Paint job not found" });
+    }
   } catch (e) {
     console.log(e);
   }

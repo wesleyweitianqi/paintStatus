@@ -13,6 +13,7 @@ const { Option } = Select;
 
 const Status = () => {
   const [list, setList] = useState([]);
+  console.log("🚀 ~ Status ~ list:", list);
   const [descriptions, setDescriptions] = useState([]);
   const [locations, setLocations] = useState([]);
 
@@ -142,7 +143,10 @@ const Status = () => {
         <h4>Painted List</h4>
         <Button onClick={() => saveTOExcel()}>Submit</Button>
       </div>
-      <p>You will find the excel record at: <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong></p>
+      <p>
+        You will find the excel record at:{" "}
+        <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong>
+      </p>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>
   );

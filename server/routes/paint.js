@@ -1,12 +1,12 @@
 var express = require("express");
 var router = express.Router();
-const Painted = require("../models/Painted");
+const Painted = require("../models/painted");
 const { createDocumentRegistry } = require("typescript");
 const fs = require("fs");
 const xlsx = require("xlsx");
 const path = require("path");
 const moment = require("moment-timezone");
-
+const PaintPriority = require("../models/paintPriority");
 router.get("/", async (req, res, next) => {
   try {
     const paintedList = await Painted.find().sort({ createdAt: -1 });
@@ -25,6 +25,7 @@ router.post("/", async (req, res, next) => {
       qty: qty,
       movedTo: movedTo,
       notes: notes,
+      complete: true,
     });
     await paintedWo.save();
     const list = await Painted.find().sort({ createdAt: -1 });
@@ -51,25 +52,19 @@ router.post("/savetoexcel", async (req, res) => {
     const file = path.resolve(filePath, "painted.xlsx");
     let workbook;
 
-    if (fs.existsSync(file)) {
-      workbook = xlsx.readFile(file);
-    } else {
-      workbook = xlsx.utils.book_new();
-    }
-
-    // Set timezone to your local timezone (replace 'America/New_York' with your timezone)
     const timezone = "America/New_York";
-    const startTime = moment.tz(moment(), timezone).startOf("day").toDate();
-    const endTime = moment.tz(moment(), timezone).endOf("day").toDate();
+    const today = moment.tz(moment(), timezone).startOf("day");
+    const endOfDay = moment.tz(moment(), timezone).endOf("day");
 
-    const list = await Painted.find({
+    // Get today's data from database
+    const todaysList = await Painted.find({
       createdAt: {
-        $gte: startTime,
-        $lte: endTime,
+        $gte: today.toDate(),
+        $lte: endOfDay.toDate(),
       },
     });
 
-    const appendData = list.map((item) => ({
+    const appendData = todaysList.map((item) => ({
       WO: item.wo,
       Description: item.description,
       Qty: item.qty,
@@ -77,34 +72,36 @@ router.post("/savetoexcel", async (req, res) => {
       Notes: item.notes,
       CreatedAt: moment(item.createdAt)
         .tz(timezone)
-        .format("YYYY-MM-DD HH:mm:ss"), // Format date consistently
+        .format("YYYY-MM-DD HH:mm:ss"),
     }));
+
+    // Read existing workbook or create new one
+    if (fs.existsSync(file)) {
+      workbook = xlsx.readFile(file);
+    } else {
+      workbook = xlsx.utils.book_new();
+    }
 
     const sheetName = "Sheet1";
     let worksheet = workbook.Sheets[sheetName];
 
     if (worksheet) {
-      const existingData = xlsx.utils.sheet_to_json(worksheet);
+      // Convert existing worksheet to JSON
+      let existingData = xlsx.utils.sheet_to_json(worksheet);
 
-      // Remove duplicates based on WO and CreatedAt
-      const uniqueData = [...existingData, ...appendData].reduce(
-        (acc, current) => {
-          const x = acc.find(
-            (item) =>
-              item.WO === current.WO && item.CreatedAt === current.CreatedAt
-          );
-          if (!x) {
-            return acc.concat([current]);
-          } else {
-            return acc;
-          }
-        },
-        []
-      );
+      // Remove today's data from existing data
+      existingData = existingData.filter(row => {
+        const rowDate = moment.tz(row.CreatedAt, "YYYY-MM-DD HH:mm:ss", timezone);
+        return !rowDate.isSame(today, 'day');
+      });
 
+      // Append today's new data
+      const updatedData = [...existingData, ...appendData];
 
-      worksheet = xlsx.utils.json_to_sheet(uniqueData);
+      // Convert back to worksheet
+      worksheet = xlsx.utils.json_to_sheet(updatedData);
     } else {
+      // If no worksheet exists, create new one with today's data
       worksheet = xlsx.utils.json_to_sheet(appendData);
     }
 
@@ -121,14 +118,8 @@ router.post("/savetoexcel", async (req, res) => {
     worksheet["!cols"] = cols;
     workbook.Sheets[sheetName] = worksheet;
 
-    //to avoid loading error while file is open, add timestamp
-
-    
-    const today = moment.tz(moment(), timezone).format('YYYY-MM-DD');
-    const filePath1 = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
-    const newFile = path.resolve(filePath1, `painted_${today}.xlsx`);
-
-    xlsx.writeFile(workbook, newFile);
+    // Save to single file
+    xlsx.writeFile(workbook, file);
 
     res.send({ code: 0, message: "Excel file saved successfully" });
   } catch (e) {
@@ -185,6 +176,52 @@ router.post("/schedule", async (req, res) => {
       schedule[key] = newSchedule[key];
     });
     res.send({ code: 0, message: "Schedule updated successfully" });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.get("/getpaintjob", async (req, res) => {
+  try {
+    const paintJobs = await PaintPriority.find({ complete: false }).exec();
+    res.send({ code: 0, data: paintJobs });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+router.post("/updatepaintjob", async (req, res) => {
+  try {
+    const { wo } = req.body;
+    console.log("🚀 ~ router.post ~ wo:", wo);
+    const result = await PaintPriority.findOneAndUpdate(
+      { wo: wo },
+      { $set: { complete: true } }, // Make sure field name matches your schema
+      {
+        new: true, // Return the updated document
+        runValidators: true, // Run schema validators
+      }
+    );
+    if (result) {
+      //insert the result into painted
+      const painted = await new Painted({
+        wo: result.wo,
+        description: result.description,
+        qty: result.qty,
+        movedTo: result.movedTo,
+        notes: result.notes,
+        complete: true,
+      });
+      await painted.save();
+      const paintJobs = await PaintPriority.find({ complete: false }).exec();
+      res.send({
+        code: 0,
+        message: "Paint job updated successfully",
+        data: paintJobs,
+      });
+    } else {
+      res.send({ code: 1, message: "Paint job not found" });
+    }
   } catch (e) {
     console.log(e);
   }

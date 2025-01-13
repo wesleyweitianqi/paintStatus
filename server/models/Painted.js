@@ -1,27 +1,27 @@
 const mongoose = require("mongoose");
 
-const paintedSchema = new mongoose.Schema(
-  {
-    wo: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-    },
-    qty: {
-      type: Number,
-    },
-    movedTo: {
-      type: String,
-    },
-    notes: {
-      type: String,
-    },
-  },
-  { timestamps: true }
-);
+let Painted;
 
-const Painted = mongoose.model("painted", paintedSchema);
+try {
+  Painted = mongoose.model("painted");
+} catch (e) {
+  Painted = mongoose.model(
+    "painted",
+    new mongoose.Schema(
+      {
+        wo: String,
+        description: String,
+        qty: Number,
+        movedTo: String,
+        notes: String,
+        complete: {
+          type: Boolean,
+          default: false,
+        },
+      },
+      { timestamps: true }
+    )
+  );
+}
 
 module.exports = Painted;

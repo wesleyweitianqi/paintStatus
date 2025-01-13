@@ -191,7 +191,7 @@ router.post("/savetoexcel", async (req, res) => {
     const appendData = req.body.map((item) => ({
       WO: item.wo,
       Quantity: item.qty,
-      CompletedTime: moment(item.completedAt)
+      CompletedTime: moment(item.updatedAt)
         .tz(timezone)
         .format("YYYY-MM-DD HH:mm:ss"),
       Comment: item.comment || ''

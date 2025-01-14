@@ -85,6 +85,7 @@ router.post("/savetoexcel", async (req, res) => {
     const sheetName = "Sheet1";
     let worksheet = workbook.Sheets[sheetName];
 
+
     if (worksheet) {
       // Convert existing worksheet to JSON
       let existingData = xlsx.utils.sheet_to_json(worksheet);
@@ -94,12 +95,9 @@ router.post("/savetoexcel", async (req, res) => {
         const rowDate = moment.tz(row.CreatedAt, "YYYY-MM-DD HH:mm:ss", timezone);
         return !rowDate.isSame(today, 'day');
       });
-
-      // Append today's new data
-      const updatedData = [...existingData, ...appendData];
-
-      // Convert back to worksheet
-      worksheet = xlsx.utils.json_to_sheet(updatedData);
+      // Combine existing data with today's data
+      const uniqueData = [...existingData, ...appendData];
+      worksheet = xlsx.utils.json_to_sheet(uniqueData);
     } else {
       // If no worksheet exists, create new one with today's data
       worksheet = xlsx.utils.json_to_sheet(appendData);
@@ -118,8 +116,13 @@ router.post("/savetoexcel", async (req, res) => {
     worksheet["!cols"] = cols;
     workbook.Sheets[sheetName] = worksheet;
 
-    // Save to single file
-    xlsx.writeFile(workbook, file);
+    //to avoid loading error while file is open, add timestamp
+
+    
+    const filePath1 = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
+    const newFile = path.resolve(filePath1, `painted.xlsx`);
+
+    xlsx.writeFile(workbook, newFile);
 
     res.send({ code: 0, message: "Excel file saved successfully" });
   } catch (e) {

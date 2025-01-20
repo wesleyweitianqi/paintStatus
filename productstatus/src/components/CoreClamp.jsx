@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
-
 import "../styles/global.scss";
 import { Link, useNavigate } from "react-router-dom";
 import instance from "../utils/http";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Button } from "antd";
+import { Button, List, Card, Row, Col } from "antd";
 import styles from "../styles/coreclamp.module.scss";
 import _ from "lodash";
 
@@ -14,12 +13,12 @@ function CoreClamp() {
   const [searchResult, setSearchResult] = useState([]);
   const [todayComplete, setTodayComplete] = useState([]);
   const [formData, setFormData] = useState({});
-
   const navigate = useNavigate();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
-
-
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [timeRecords, setTimeRecords] = useState([]);
   const [completedList, setCompletedList] = useState([]);
   const host = "https://192.168.1.169:8080";
 
@@ -44,6 +43,9 @@ function CoreClamp() {
       const data = res.data.data;
       setTodayComplete(data);
     });
+    instance.get("/coreclamp/getTimeRecords").then((res) => {
+      setTimeRecords(res.data.data);
+    });
   }, []);
 
   useEffect(() => {
@@ -59,6 +61,43 @@ function CoreClamp() {
 
     setFormData(initialFormData);
   }, [todayComplete]);
+
+  const handleTimerClick = async () => {
+    if (isTimerRunning) {
+      // Stop the timer
+      const endTime = new Date();
+      const updatedRecords = [...timeRecords];
+      const lastRecord = updatedRecords[updatedRecords.length - 1];
+      lastRecord.endTime = endTime;
+
+      // Update the end time in the backend
+      await instance
+        .post("/coreclamp/saveTimeRecords", lastRecord)
+        .then((response) => {
+          setIsTimerRunning(false);
+          setTimeRecords(updatedRecords);
+        })
+        .catch((error) => {
+          console.error("Error updating time records:", error);
+        });
+    } else {
+      // Start the timer
+      const newStartTime = new Date();
+      const newRecord = { startTime: newStartTime, endTime: null };
+
+      // Send the new record to the backend
+      await instance
+        .post("/coreclamp/saveTimeRecords", newRecord)
+        .then((response) => {
+          setIsTimerRunning(true);
+          setTimeRecords([...timeRecords, newRecord]);
+          console.log("Start time recorded:", response.data);
+        })
+        .catch((error) => {
+          console.error("Error recording start time:", error);
+        });
+    }
+  };
 
   const dataSource = isSearchFocused ? searchResult : ccList;
 
@@ -82,11 +121,7 @@ function CoreClamp() {
     return (
       <tr key={index}>
         <th scope="row">{index}</th>
-        <td>
-          {/* <Link to={`/data/${item.wo}`} className="fw-bold mb-1"> */}
-          {item.wo}
-          {/* </Link> */}
-        </td>
+        <td>{item.wo}</td>
         <td>{item.qty}</td>
         <td>
           {item.createdAt
@@ -120,19 +155,17 @@ function CoreClamp() {
     });
   };
 
-  // Helper function to format date with time
   const formatDateTime = (date) => {
-    return new Date(date).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+    return new Date(date).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
-  // Helper function to format date for datetime-local input
   const formatDateTimeForInput = (date) => {
     return new Date(date).toISOString().slice(0, 19);
   };
@@ -172,10 +205,7 @@ function CoreClamp() {
               />
             </td>
             <td>
-              <Button 
-                variant="warning"
-                onClick={() => cancelHandler(item.wo)}
-              >
+              <Button variant="warning" onClick={() => cancelHandler(item.wo)}>
                 Cancel
               </Button>
             </td>
@@ -186,16 +216,18 @@ function CoreClamp() {
   );
 
   const handleSubmit = async () => {
-    // Prepare data for all completed items
-    const submissionData = todayComplete.map(item => ({
+    const submissionData = todayComplete.map((item) => ({
       wo: item.wo,
       qty: item.qty,
       completedAt: item.completedAt || formData[item.wo]?.completedAt,
-      comment: formData[item.wo]?.comment || ''
+      comment: formData[item.wo]?.comment || "",
     }));
 
     try {
-      const response = await instance.post("/coreclamp/savetoexcel", submissionData);
+      const response = await instance.post(
+        "/coreclamp/savetoexcel",
+        submissionData
+      );
       if (response.data.code === 0) {
         toast.success("Data saved to Excel successfully!");
       } else {
@@ -215,18 +247,16 @@ function CoreClamp() {
   const finishHandler = async (wo) => {
     try {
       const response = await instance.post("/coreclamp/finish", { wo: wo });
-      
+
       if (response.data.code === 0) {
         const savedData = response.data.data;
         toast.success(`${wo} completed`);
-        
-        // Update the lists
+
         fetchCCList();
-        
-        // Update completed list
-        setTodayComplete(prev => {
+
+        setTodayComplete((prev) => {
           const newList = [...prev];
-          newList.unshift(savedData); // Add new item at the beginning
+          newList.unshift(savedData);
           return newList;
         });
       } else {
@@ -240,21 +270,58 @@ function CoreClamp() {
 
   return (
     <div>
-      {/* <Button onClick={handleClick}>To add</Button>
-      <div>
-        <input
-          name="bktSearch"
-          value={search}
-          type="text"
-          onChange={handleInput}
-          onFocus={handleInputFocus}
-          onBlur={handleInputBlur}
+      <Button
+        type="primary"
+        onClick={handleTimerClick}
+        className={isTimerRunning ? styles.stopButton : ""}
+      >
+        {isTimerRunning ? "Stop Timer" : "Start Timer"}
+      </Button>
+      <Card title="Time Records" style={{ marginTop: 20 }}>
+        <List
+          bordered
+          dataSource={timeRecords}
+          renderItem={(record, index) => (
+            <List.Item
+              key={index}
+              style={{
+                padding: "4px 8px", // Reduced padding
+                margin: "2px 0", // Reduced margin
+              }}
+            >
+              <Row style={{ width: "100%" }}>
+                <Col span={12}>
+                  <strong style={{ fontSize: "12px" }}>
+                    Record {index + 1}
+                  </strong>{" "}
+                  {/* Smaller font size */}
+                </Col>
+                <Col span={12}>
+                  <div style={{ fontSize: "12px" }}>
+                    {" "}
+                    {/* Smaller font size */}
+                    Start:{" "}
+                    {record.startTime
+                      ? new Date(record.startTime).toLocaleString()
+                      : "N/A"}
+                  </div>
+                  <div style={{ fontSize: "12px" }}>
+                    {" "}
+                    {/* Smaller font size */}
+                    End:{" "}
+                    {record.endTime
+                      ? new Date(record.endTime).toLocaleString()
+                      : "In Progress"}
+                  </div>
+                </Col>
+              </Row>
+            </List.Item>
+          )}
+          style={{ margin: "0" }} // Remove extra margin around the List
         />
-        <button onClick={handleSubmit}>Search</button>
-      </div> */}
+      </Card>
       <h4>To Do List</h4>
       <hr />
-
       <table className="table">
         <thead>
           <tr>
@@ -281,10 +348,6 @@ function CoreClamp() {
       <div className={styles.listContainer}>
         <p>{completedDataSource}</p>
       </div>
-      {/* <Button className={styles.searchButton} onClick={triggerFindInPage}>
-        Search
-      </Button> */}
-
       <ToastContainer
         position="top-center"
         autoClose={5000}

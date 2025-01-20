@@ -6,6 +6,7 @@ const fs = require("fs");
 const xlsx = require("xlsx");
 const path = require("path");
 const moment = require("moment-timezone");
+const TimeRecord = require("../models/timeRecord");
 
 router.get("/list", async (req, res) => {
   console.log("get list");
@@ -27,7 +28,7 @@ router.get("/list", async (req, res) => {
 router.post("/finish", async (req, res) => {
   try {
     const { wo } = req.body;
-    
+
     const result = await CoreClamp.findOneAndUpdate(
       { wo: wo },
       { isComplete: true },
@@ -49,10 +50,10 @@ router.get("/todaycomplete", async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const result = await CoreClamp.find({
       isComplete: true,
-      updatedAt: { $gte: today }
+      updatedAt: { $gte: today },
     }).sort({ updatedAt: -1 });
 
     res.send({ code: 0, data: result });
@@ -186,7 +187,7 @@ router.post("/savetoexcel", async (req, res) => {
     }
 
     const timezone = "America/New_York";
-    
+
     // Format the received data
     const appendData = req.body.map((item) => ({
       WO: item.wo,
@@ -194,9 +195,9 @@ router.post("/savetoexcel", async (req, res) => {
       CompletedTime: moment(item.updatedAt)
         .tz(timezone)
         .format("YYYY-MM-DD HH:mm:ss"),
-      Comment: item.comment || ''
+      Comment: item.comment || "",
     }));
-  
+
     const sheetName = "Sheet1";
     let worksheet = workbook.Sheets[sheetName];
 
@@ -208,7 +209,7 @@ router.post("/savetoexcel", async (req, res) => {
         (acc, current) => {
           const x = acc.find(
             (item) =>
-              item.WO === current.WO && 
+              item.WO === current.WO &&
               item.CompletedTime === current.CompletedTime
           );
           if (!x) {
@@ -227,10 +228,10 @@ router.post("/savetoexcel", async (req, res) => {
 
     // Add column width specifications
     const cols = [
-      { wch: 15 },  // WO
-      { wch: 10 },  // Quantity
-      { wch: 20 },  // CompletedTime
-      { wch: 40 },  // Comment
+      { wch: 15 }, // WO
+      { wch: 10 }, // Quantity
+      { wch: 20 }, // CompletedTime
+      { wch: 40 }, // Comment
     ];
 
     worksheet["!cols"] = cols;
@@ -243,6 +244,32 @@ router.post("/savetoexcel", async (req, res) => {
     res.send({ code: 1, message: "Error saving Excel file", error: e.message });
   }
 });
-  
+
+router.post("/saveTimeRecords", async (req, res) => {
+  const { startTime, endTime } = req.body;
+  const timeRecord = new TimeRecord({ startTime, endTime });
+  await timeRecord.save();
+  res.send({ code: 0, message: "Time record saved successfully" });
+  console.log("🚀 ~ router.post ~ timeRecords:", startTime, endTime);
+});
+
+router.get("/getTimeRecords", async (req, res) => {
+  //i want to get start of day and end of day
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  try {
+    const timeRecords = await TimeRecord.find({
+      startTime: { $gte: today, $lte: endOfDay },
+      endTime: { $gte: today, $lte: endOfDay },
+    });
+    res.send({ code: 0, data: timeRecords });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ code: 1, message: "Error fetching time records" });
+  }
+});
 
 module.exports = router;

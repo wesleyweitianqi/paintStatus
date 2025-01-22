@@ -187,41 +187,27 @@ router.post("/savetoexcel", async (req, res) => {
     }
 
     const timezone = "America/New_York";
-
-    // Format the received data
+    const today = moment.tz(moment(), timezone).startOf("day");
     const appendData = req.body.map((item) => ({
       WO: item.wo,
       Quantity: item.qty,
-      CompletedTime: moment(item.updatedAt)
-        .tz(timezone)
-        .format("YYYY-MM-DD HH:mm:ss"),
-      Comment: item.comment || "",
+      CompletedTime: moment(item.updatedAt).tz(timezone).format("YYYY-MM-DD HH:mm:ss"),
+      Comment: item.comment
     }));
 
     const sheetName = "Sheet1";
     let worksheet = workbook.Sheets[sheetName];
 
     if (worksheet) {
-      const existingData = xlsx.utils.sheet_to_json(worksheet);
-
-      // Remove duplicates based on WO and CompletedTime
-      const uniqueData = [...existingData, ...appendData].reduce(
-        (acc, current) => {
-          const x = acc.find(
-            (item) =>
-              item.WO === current.WO &&
-              item.CompletedTime === current.CompletedTime
-          );
-          if (!x) {
-            return acc.concat([current]);
-          } else {
-            return acc;
-          }
-        },
-        []
-      );
-
-      worksheet = xlsx.utils.json_to_sheet(uniqueData);
+      let existingData = xlsx.utils.sheet_to_json(worksheet);
+      existingData = existingData.filter(row => {
+        const rowDate = moment.tz(row.CompletedTime, "YYYY-MM-DD HH:mm:ss", timezone);
+        return !rowDate.isSame(today, 'day');
+      });
+      console.log(existingData);
+      const newData = existingData.concat(appendData);
+      console.log("🚀 ~ router.post ~ newData:", newData)
+      worksheet = xlsx.utils.json_to_sheet(newData);
     } else {
       worksheet = xlsx.utils.json_to_sheet(appendData);
     }
@@ -236,6 +222,10 @@ router.post("/savetoexcel", async (req, res) => {
 
     worksheet["!cols"] = cols;
     workbook.Sheets[sheetName] = worksheet;
+
+    // To avoid loading error while file is open, add timestamp
+    // const newFile = path.resolve(filePath, `coreclamps_${Date.now()}.xlsx`);
+
     xlsx.writeFile(workbook, file);
 
     res.send({ code: 0, message: "Excel file saved successfully" });
@@ -249,8 +239,17 @@ router.post("/saveTimeRecords", async (req, res) => {
   const { startTime, endTime } = req.body;
   const timeRecord = new TimeRecord({ startTime, endTime });
   await timeRecord.save();
-  res.send({ code: 0, message: "Time record saved successfully" });
-  console.log("🚀 ~ router.post ~ timeRecords:", startTime, endTime);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+  const list = await TimeRecord.find({
+    startTime: { $gte: today, $lte: endOfDay },
+    endTime: { $gte: today, $lte: endOfDay },
+  });
+  res.send({ code: 0, message: "Time record saved successfully", data: list });
+  
 });
 
 router.get("/getTimeRecords", async (req, res) => {
@@ -265,6 +264,7 @@ router.get("/getTimeRecords", async (req, res) => {
       startTime: { $gte: today, $lte: endOfDay },
       endTime: { $gte: today, $lte: endOfDay },
     });
+    console.log("🚀 ~ router.get ~ timeRecords:", timeRecords)
     res.send({ code: 0, data: timeRecords });
   } catch (error) {
     console.error(error);

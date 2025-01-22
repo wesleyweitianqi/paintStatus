@@ -44,6 +44,7 @@ function CoreClamp() {
       setTodayComplete(data);
     });
     instance.get("/coreclamp/getTimeRecords").then((res) => {
+      console.log(res.data.data);
       setTimeRecords(res.data.data);
     });
   }, []);

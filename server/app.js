@@ -14,12 +14,12 @@ const coreclampRouter = require("./routes/coreclamp");
 var app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-// app.use((req, res, next) => {
-//   console.log(`Received ${req.method} request to ${req.url} from ${req.ip}`);
-//   res.setHeader("Access-Control-Allow-Origin", "*");
+app.use((req, res, next) => {
+  console.log(`Received ${req.method} request to ${req.url} from ${req.ip}`);
 
-//   next();
-// });
+
+  next();
+});
 
 // const corsOptions = {
 //   origin: function (origin, callback) {

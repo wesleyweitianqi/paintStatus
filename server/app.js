@@ -10,13 +10,13 @@ const paintRounter = require("./routes/paint");
 const shippingRounter = require("./routes/shipping");
 const powderRouter = require("./routes/powder");
 const coreclampRouter = require("./routes/coreclamp");
+const bendRouter = require("./routes/bend");
 
 var app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use((req, res, next) => {
   console.log(`Received ${req.method} request to ${req.url} from ${req.ip}`);
-
 
   next();
 });
@@ -66,5 +66,6 @@ app.use("/paint", paintRounter);
 app.use("/shipping", shippingRounter);
 app.use("/powder", powderRouter);
 app.use("/coreclamp", coreclampRouter);
+app.use("/bend", bendRouter);
 
 module.exports = app;

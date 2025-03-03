@@ -51,6 +51,11 @@ function Navi() {
                 Shearing
               </Link>
             </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/bend">
+                Bending
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

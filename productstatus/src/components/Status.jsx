@@ -36,7 +36,7 @@ const Status = () => {
   return (
     <div>
       <h4>Production Status</h4>
-      
+
       <hr />
       <h4>
         Current Painting: <span style={{ color: "red" }}>{currentPaint}</span>

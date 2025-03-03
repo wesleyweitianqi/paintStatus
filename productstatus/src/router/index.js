@@ -8,7 +8,7 @@ import CoreClamp from "../components/CoreClamp";
 import Shear from "../components/Shear";
 import Priority from "../components/Priority";
 import Setting from "../components/Setting";
-
+import Bending from "../components/Bending";
 
 const router = createBrowserRouter([
   {
@@ -69,6 +69,13 @@ const router = createBrowserRouter([
         element: <Shear />,
         meta: {
           title: "coreclamp",
+        },
+      },
+      {
+        path: "/bend",
+        element: <Bending />,
+        meta: {
+          title: "bending",
         },
       },
       {

@@ -1,79 +1,52 @@
-import React, { useEffect, useState } from "react";
-import { Form, Input, Button, Row, Col, Select } from "antd";
-import PaintedTable from "./PaintedTable.jsx";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear } from "@fortawesome/free-solid-svg-icons"; // or free-regular-svg-icons
-
-import { Link } from "react-router-dom";
-import instance from "../utils/http.js";
-import CurrentPaint from "./CurrentPaint.jsx";
-import styles from "../styles/painted.module.scss";
+import React, { useState, useEffect } from "react";
+import { Form, Input, Button, DatePicker, Row, Col, Select } from "antd";
+import instance from "../utils/http";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import styles from "../styles/bend.module.scss";
 import { loadDescriptionList, loadLocationList } from "../utils/constants.js";
+import PaintedTable from "./PaintedTable";
+
 const { Option } = Select;
 
-const Status = () => {
+const Bending = () => {
+  const [form] = Form.useForm();
   const [list, setList] = useState([]);
-  console.log("🚀 ~ Status ~ list:", list);
-  const [descriptions, setDescriptions] = useState([]);
+  console.log("🚀 ~ Bending ~ list:", list);
   const [locations, setLocations] = useState([]);
-
-  useEffect(() => {
-    // Load descriptions and locations from constants.js
-    setDescriptions(loadDescriptionList());
-    setLocations(loadLocationList());
-  }, []);
-
+  const [descriptions, setDescriptions] = useState([]);
   const handleFinish = async (values) => {
     try {
-      const res = await instance.post("/paint", values);
+      const res = await instance.post("/bend", values);
       setList(res.data.data);
     } catch (error) {
       console.error("Error submitting the request:", error);
     }
   };
-
   const handleDelete = async (index) => {
     console.log(index);
     try {
       const newList = [...list];
       console.log("🚀 ~ handleDelete ~ newList:", newList);
       const [item] = newList.splice(index - 1, 1);
-      await instance.post("/paint/delete", { wo: item.wo });
+      await instance.post("/bend/delete", { wo: item.wo });
       setList(newList);
     } catch (error) {
       console.error("Error deleting item:", error);
     }
   };
-  const saveTOExcel = () => {
-    instance.post("/paint/savetoexcel").then((res) => {
-      if (res.data.code === 0) {
-        alert(res.data.message);
-      }
-    });
-  };
-
   useEffect(() => {
-    instance
-      .get("/paint")
-      .then((res) => {
-        setList(res.data.data);
-      })
-      .catch((e) => {
-        console.error(e);
-      });
+    // Load descriptions and locations from constants.js
+    setDescriptions(loadDescriptionList());
+    setLocations(loadLocationList());
+    instance.get("/bend").then((res) => {
+      setList(res.data.data);
+    });
   }, []);
 
   return (
-    <div>
-      <div className={styles.headContainer}>
-        <h4>Painted Parts Entry</h4>
-        <Link to="/priority">
-          <Button>To Priority List</Button>
-        </Link>
-        <Link to="/setting">
-          <FontAwesomeIcon icon={faGear} size="2x" />
-        </Link>
-      </div>
+    <div className={styles.container}>
+      <h2 className={styles.title}>Record Bending Part Information</h2>
       <Form
         layout="vertical"
         onFinish={handleFinish}
@@ -134,22 +107,12 @@ const Status = () => {
           </Button>
         </Form.Item>
       </Form>
-
+      <h4>Bended Job Record</h4>
       <hr />
 
-      <h4>Current Paint</h4>
-      <CurrentPaint />
-      <div className={styles.headContainer}>
-        <h4>Painted List</h4>
-        <Button onClick={() => saveTOExcel()}>Submit</Button>
-      </div>
-      <p>
-        You will find the excel record at:{" "}
-        <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong>
-      </p>
       <PaintedTable list={list} handleDelete={handleDelete} />
     </div>
   );
 };
 
-export default Status;
+export default Bending;

@@ -64,7 +64,12 @@ router.get("/todaycomplete", async (req, res) => {
 
 router.get("/completed", async (req, res) => {
   try {
-    const result = await CoreClamp.find({ isComplete: true });
+    const thisyear = new Date().getFullYear();
+    const startOfYear = new Date(thisyear, 0, 1);
+    const result = await CoreClamp.find({
+      isComplete: true,
+      updatedAt: { $gte: startOfYear },
+    });
     if (result) {
       res.send({ code: 0, data: result });
       return;
@@ -191,8 +196,10 @@ router.post("/savetoexcel", async (req, res) => {
     const appendData = req.body.map((item) => ({
       WO: item.wo,
       Quantity: item.qty,
-      CompletedTime: moment(item.updatedAt).tz(timezone).format("YYYY-MM-DD HH:mm:ss"),
-      Comment: item.comment
+      CompletedTime: moment(item.updatedAt)
+        .tz(timezone)
+        .format("YYYY-MM-DD HH:mm:ss"),
+      Comment: item.comment,
     }));
 
     const sheetName = "Sheet1";
@@ -200,13 +207,17 @@ router.post("/savetoexcel", async (req, res) => {
 
     if (worksheet) {
       let existingData = xlsx.utils.sheet_to_json(worksheet);
-      existingData = existingData.filter(row => {
-        const rowDate = moment.tz(row.CompletedTime, "YYYY-MM-DD HH:mm:ss", timezone);
-        return !rowDate.isSame(today, 'day');
+      existingData = existingData.filter((row) => {
+        const rowDate = moment.tz(
+          row.CompletedTime,
+          "YYYY-MM-DD HH:mm:ss",
+          timezone
+        );
+        return !rowDate.isSame(today, "day");
       });
       console.log(existingData);
       const newData = existingData.concat(appendData);
-      console.log("🚀 ~ router.post ~ newData:", newData)
+      console.log("🚀 ~ router.post ~ newData:", newData);
       worksheet = xlsx.utils.json_to_sheet(newData);
     } else {
       worksheet = xlsx.utils.json_to_sheet(appendData);
@@ -249,7 +260,6 @@ router.post("/saveTimeRecords", async (req, res) => {
     endTime: { $gte: today, $lte: endOfDay },
   });
   res.send({ code: 0, message: "Time record saved successfully", data: list });
-  
 });
 
 router.get("/getTimeRecords", async (req, res) => {
@@ -264,7 +274,7 @@ router.get("/getTimeRecords", async (req, res) => {
       startTime: { $gte: today, $lte: endOfDay },
       endTime: { $gte: today, $lte: endOfDay },
     });
-    console.log("🚀 ~ router.get ~ timeRecords:", timeRecords)
+    console.log("🚀 ~ router.get ~ timeRecords:", timeRecords);
     res.send({ code: 0, data: timeRecords });
   } catch (error) {
     console.error(error);

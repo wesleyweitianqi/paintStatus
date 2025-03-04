@@ -1,6 +1,6 @@
 var express = require("express");
 var router = express.Router();
-const Painted = require("../models/painted");
+const Painted = require("../models/painted.js");
 const { createDocumentRegistry } = require("typescript");
 const fs = require("fs");
 const xlsx = require("xlsx");
@@ -37,9 +37,9 @@ router.post("/", async (req, res, next) => {
 
 router.post("/delete", async (req, res, next) => {
   try {
-    const { deleteWo } = req.body;
-
-    const list = await Painted.findOneAndDelete({ wo: deleteWo });
+    const { wo } = req.body;
+    console.log(wo);
+    const list = await Painted.findOneAndDelete({ wo: wo });
     res.send({ code: 0, data: list });
   } catch (e) {
     console.log(e);
@@ -48,8 +48,8 @@ router.post("/delete", async (req, res, next) => {
 
 router.post("/savetoexcel", async (req, res) => {
   try {
-    const filePath = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
-    const file = path.resolve(filePath, "painted.xlsx");
+    ;
+    const file = path.resolve(__dirname, "..", "painted.xlsx");
     let workbook;
 
     const timezone = "America/New_York";
@@ -119,10 +119,11 @@ router.post("/savetoexcel", async (req, res) => {
     //to avoid loading error while file is open, add timestamp
 
     
-    const filePath1 = "O:\\1. PERSONAL FOLDERS\\Wesley\\PaintRecord";
-    const newFile = path.resolve(filePath1, `painted.xlsx`);
+    const filePath1 = path.resolve(__dirname, "..", "painted.xlsx");
+    console.log(filePath1);
+    // const newFile = path.resolve(filePath1, `painted.xlsx`);
 
-    xlsx.writeFile(workbook, newFile);
+    xlsx.writeFile(workbook, filePath1);
 
     res.send({ code: 0, message: "Excel file saved successfully" });
   } catch (e) {

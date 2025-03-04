@@ -3,6 +3,7 @@ import { Form, Input, Button, Row, Col, Select } from "antd";
 import PaintedTable from "./PaintedTable.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons"; // or free-regular-svg-icons
+import { message } from "antd";
 
 import { Link } from "react-router-dom";
 import instance from "../utils/http.js";
@@ -13,7 +14,6 @@ const { Option } = Select;
 
 const Status = () => {
   const [list, setList] = useState([]);
-  console.log("🚀 ~ Status ~ list:", list);
   const [descriptions, setDescriptions] = useState([]);
   const [locations, setLocations] = useState([]);
 
@@ -26,6 +26,9 @@ const Status = () => {
   const handleFinish = async (values) => {
     try {
       const res = await instance.post("/paint", values);
+      if(res.data.code === 0){
+        message.success("Painted part added successfully");
+      }
       setList(res.data.data);
     } catch (error) {
       console.error("Error submitting the request:", error);
@@ -36,8 +39,8 @@ const Status = () => {
     console.log(index);
     try {
       const newList = [...list];
-      console.log("🚀 ~ handleDelete ~ newList:", newList);
       const [item] = newList.splice(index - 1, 1);
+      console.log(item)
       await instance.post("/paint/delete", { wo: item.wo });
       setList(newList);
     } catch (error) {

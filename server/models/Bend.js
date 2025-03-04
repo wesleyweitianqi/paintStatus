@@ -12,7 +12,7 @@ try {
         wo: String,
         description: String,
         qty: Number,
-        movedTo: String,
+        priority: Number,
         notes: String,
         complete: {
           type: Boolean,

@@ -31,7 +31,7 @@ const Priority = () => {
     { title: "WO", dataIndex: "wo", key: "wo" },
     { title: "Description", dataIndex: "description", key: "description" },
     { title: "Qty", dataIndex: "qty", key: "qty" },
-    { title: "Moved To", dataIndex: "movedTo", key: "movedTo" },
+    { title: "Priority", dataIndex: "priority", key: "priority" },
     { title: "Notes", dataIndex: "notes", key: "notes" },
     {
       title: "Action",

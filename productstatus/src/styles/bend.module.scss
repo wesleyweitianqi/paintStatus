@@ -20,3 +20,8 @@
 .submitButton {
   width: 100%;
 }
+
+.priority .ant-form-item-control {
+  display: flex;
+  justify-content: flex-start;
+}

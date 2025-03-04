@@ -110,7 +110,7 @@ const Status = () => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="Quantity" name="qty">
-              <Input type="number" />
+              <Input type="number" min={0} />
             </Form.Item>
           </Col>
           <Col span={12}>

@@ -1,5 +1,6 @@
 const express = require("express");
 const Bend = require("../models/bend");
+const PaintPriority = require("../models/paintPriority");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
@@ -18,6 +19,11 @@ router.post("/", async (req, res) => {
   try {
     const newBend = new Bend(req.body);
     console.log("🚀 ~ router.post ~ newBend:", newBend);
+    const newPaintPriority = new PaintPriority({
+      ...req.body,
+      complete: false,
+    });
+    await newPaintPriority.save();
     await newBend.save();
     const today = new Date();
     today.setHours(0, 0, 0, 0);

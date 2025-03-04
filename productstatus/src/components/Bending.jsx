@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, DatePicker, Row, Col, Select } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  DatePicker,
+  Row,
+  Col,
+  Select,
+  InputNumber,
+  Table,
+} from "antd";
 import instance from "../utils/http";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -44,6 +54,27 @@ const Bending = () => {
     });
   }, []);
 
+  const columns = [
+    { title: "Work Order", dataIndex: "wo", key: "wo" },
+    { title: "Description", dataIndex: "description", key: "description" },
+    { title: "Quantity", dataIndex: "qty", key: "qty" },
+    { title: "Priority", dataIndex: "priority", key: "priority" },
+    { title: "Notes", dataIndex: "notes", key: "notes" },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, record) => (
+        <Button type="primary" onClick={() => handleDelete(record)}>
+          Delete
+        </Button>
+      ),
+    },
+  ];
+
+  const handleWOChange = (e) => {
+    form.setFieldsValue({ wo: e.target.value.toUpperCase() });
+  };
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>Record Bending Part Information</h2>
@@ -54,7 +85,7 @@ const Bending = () => {
           wo: "",
           description: "",
           qty: "",
-          movedTo: "",
+          priority: 1,
           notes: "",
         }}
       >
@@ -65,7 +96,7 @@ const Bending = () => {
               name="wo"
               rules={[{ required: true, message: "Please enter WO#" }]}
             >
-              <Input />
+              <Input onChange={handleWOChange} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -83,18 +114,16 @@ const Bending = () => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="Quantity" name="qty">
-              <Input type="number" />
+              <Input type="number" min={0} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="Moved To" name="movedTo">
-              <Select placeholder="Select Location">
-                {locations.map((location, index) => (
-                  <Option key={index} value={location}>
-                    {location}
-                  </Option>
-                ))}
-              </Select>
+            <Form.Item
+              label="Priority"
+              name="priority"
+              // className={styles.priority}
+            >
+              <InputNumber min={1} max={3} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
         </Row>
@@ -108,9 +137,8 @@ const Bending = () => {
         </Form.Item>
       </Form>
       <h4>Bended Job Record</h4>
+      <Table dataSource={list} columns={columns} />
       <hr />
-
-      <PaintedTable list={list} handleDelete={handleDelete} />
     </div>
   );
 };

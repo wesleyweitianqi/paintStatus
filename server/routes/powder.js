@@ -1,6 +1,6 @@
 var express = require("express");
 var router = express.Router();
-const Powder = require("../models/Powder");
+const Powder = require("../models/powder");
 
 router.get("/", async (req, res) => {
   try {

@@ -1,6 +1,6 @@
 var express = require("express");
 var router = express.Router();
-const Painted = require("../models/Painted");
+const Painted = require("../models/painted");
 
 /* GET home page. */
 router.get("/", async (req, res, next) => {

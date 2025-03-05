@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Shear = require("../models/Shear");
+const Shear = require("../models/shear");
 
 router.post("/", async (req, res) => {
   try {

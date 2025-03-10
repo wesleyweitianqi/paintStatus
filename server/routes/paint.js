@@ -142,6 +142,81 @@ router.get("/currentpaint", async (req, res) => {
   }
 });
 
+//this api will save the job done on a particular date to the excel file
+router.get("/savetoexcel/:date", async (req, res) => {
+  try {
+    const file = path.resolve(__dirname, "..", "painted.xlsx");
+    const date = req.params.date;
+    console.log(date);
+    const today = moment(date).startOf("day");
+    const endOfDay = moment(date).endOf("day");
+    let workbook;
+    
+    // Get today's data from database
+    const todaysList = await Painted.find({
+      createdAt: {
+        $gte: today.toDate(),
+        $lte: endOfDay.toDate(),
+      },
+    });
+    const appendData = todaysList.map((item) => ({
+      WO: item.wo,
+      Description: item.description,
+      Qty: item.qty,
+      MovedTo: item.movedTo,
+      Notes: item.notes,
+      CreatedAt: moment(item.createdAt)
+       .tz("America/New_York")
+       .format("YYYY-MM-DD HH:mm:ss"),
+    }));
+    // Read existing workbook or create new one
+    if (fs.existsSync(file)) {
+      workbook = xlsx.readFile(file);
+    } else {
+      workbook = xlsx.utils.book_new();
+    }
+    const sheetName = "Sheet1";
+    let worksheet = workbook.Sheets[sheetName];
+    if (worksheet) {
+      // Convert existing worksheet to JSON
+      let existingData = xlsx.utils.sheet_to_json(worksheet);
+      // Remove today's data from existing data
+      existingData = existingData.filter(
+        (row) =>
+         !moment.tz(row.CreatedAt, "YYYY-MM-DD HH:mm:ss", "America/New_York")
+           .isSame(today, "day")
+      );
+      // Combine existing data with today's data
+      const uniqueData = [...existingData,...appendData];
+      worksheet = xlsx.utils.json_to_sheet(uniqueData);
+    } else {
+      // If no worksheet exists, create new one with today's data
+      worksheet = xlsx.utils.json_to_sheet(appendData);
+    }
+    // Add column width specifications
+    const cols = [
+      { wch: 15 }, // WO
+      { wch: 30 }, // Description
+      { wch: 10 }, // Qty
+      { wch: 15 }, // MovedTo
+      { wch: 30 }, // Notes
+      { wch: 20 }, // CreatedAt
+    ];
+    worksheet["!cols"] = cols;
+    workbook.Sheets[sheetName] = worksheet;
+    //to avoid loading error while file is open, add timestamp
+    const filePath1 = path.resolve(__dirname, "..", "painted.xlsx");
+    console.log(filePath1);
+    // const newFile = path.resolve(filePath1, `painted.xlsx`);
+    xlsx.writeFile(workbook, filePath1);
+    res.send({ code: 0, message: "Excel file saved successfully" });
+  } catch (e) {
+    console.log(e);
+    res.send({ code: 1, message: "Error saving Excel file", error: e.message });
+  }
+});
+
+
 router.post("/currentpaint", async (req, res) => {
   try {
     const { paint } = req.body;

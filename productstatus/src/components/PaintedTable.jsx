@@ -3,6 +3,16 @@ import { Table, Button } from "antd";
 
 const PaintedTable = (props) => {
   const { list, handleDelete } = props;
+  const isToday = (date) => {
+    const currentDate = new Date();
+    const updatedDate = new Date(date);
+    updatedDate.setHours(updatedDate.getHours() + 4);
+    return (
+      updatedDate.getFullYear() === currentDate.getFullYear() &&
+      updatedDate.getMonth() === currentDate.getMonth() &&
+      updatedDate.getDate() === currentDate.getDate()
+    );
+  };
 
   const columns = [
     {
@@ -26,6 +36,11 @@ const PaintedTable = (props) => {
       key: "movedTo",
     },
     {
+      title: "UpdatedAt",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+    },
+    {
       title: "Notes",
       dataIndex: "notes",
       key: "notes",
@@ -34,9 +49,10 @@ const PaintedTable = (props) => {
       title: "Action",
       dataIndex: "",
       key: "x",
-      render: (record) => (
-        <Button onClick={() => handleDelete(record.key)}>Delete</Button>
-      ),
+      render: (record) =>
+        isToday(record.updatedAt) ? (
+          <Button onClick={() => handleDelete(record.key)}>Delete</Button>
+        ) : null,
     },
   ];
 
@@ -49,6 +65,7 @@ const PaintedTable = (props) => {
         description: item.description,
         qty: item.qty,
         movedTo: item.movedTo,
+        updatedAt: item.updatedAt.toString().substring(0, 10),
         notes: item.notes,
 
         createdAt: item.createdAt.toString().substring(0, 10),

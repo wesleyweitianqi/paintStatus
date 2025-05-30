@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import instance from "../utils/http";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Button, List, Card, Row, Col } from "antd";
+import { Button, List, Card, Row, Col, Input, Modal } from "antd";
 import styles from "../styles/coreclamp.module.scss";
 import _ from "lodash";
 
@@ -21,6 +21,10 @@ function CoreClamp() {
   const [timeRecords, setTimeRecords] = useState([]);
   const [completedList, setCompletedList] = useState([]);
   const host = "https://192.168.1.169:8080";
+  const [currentTimer, setCurrentTimer] = useState(null);
+  const [timerNotes, setTimerNotes] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [operatorName, setOperatorName] = useState("");
 
   const fetchCCList = () => {
     instance
@@ -43,10 +47,6 @@ function CoreClamp() {
       const data = res.data.data;
       setTodayComplete(data);
     });
-    instance.get("/coreclamp/getTimeRecords").then((res) => {
-      console.log(res.data.data);
-      setTimeRecords(res.data.data);
-    });
   }, []);
 
   useEffect(() => {
@@ -63,41 +63,107 @@ function CoreClamp() {
     setFormData(initialFormData);
   }, [todayComplete]);
 
+  // Combined timer polling and history fetch
+  useEffect(() => {
+    const fetchTimerData = async () => {
+      try {
+        const response = await instance.get("/coreclamp/timer/status");
+        if (response.data.code === 0 && response.data.data) {
+          const { currentTimer, todayTimers } = response.data.data;
+          setIsTimerRunning(currentTimer?.isRunning || false);
+          setTimeRecords(todayTimers || []);
+        }
+      } catch (error) {
+        console.error("Error fetching timer data:", error);
+      }
+    };
+
+    // Initial fetch
+    fetchTimerData();
+
+    // Poll every 5 seconds
+    const intervalId = setInterval(fetchTimerData, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const handleTimerClick = async () => {
     if (isTimerRunning) {
       // Stop the timer
       const endTime = new Date();
-      const updatedRecords = [...timeRecords];
-      const lastRecord = updatedRecords[updatedRecords.length - 1];
-      lastRecord.endTime = endTime;
-
-      // Update the end time in the backend
-      await instance
-        .post("/coreclamp/saveTimeRecords", lastRecord)
-        .then((response) => {
+      try {
+        const response = await instance.post("/coreclamp/timer/stop", { endTime });
+        if (response.data.code === 0) {
+          const { todayTimers } = response.data.data;
           setIsTimerRunning(false);
-          setTimeRecords(updatedRecords);
-        })
-        .catch((error) => {
-          console.error("Error updating time records:", error);
-        });
+          setTimeRecords(todayTimers);
+        }
+      } catch (error) {
+        console.error("Error updating time records:", error);
+        toast.error("Failed to stop timer");
+      }
     } else {
       // Start the timer
       const newStartTime = new Date();
-      const newRecord = { startTime: newStartTime, endTime: null };
-
-      // Send the new record to the backend
-      await instance
-        .post("/coreclamp/saveTimeRecords", newRecord)
-        .then((response) => {
-          setIsTimerRunning(true);
-          setTimeRecords([...timeRecords, newRecord]);
-          console.log("Start time recorded:", response.data);
-        })
-        .catch((error) => {
-          console.error("Error recording start time:", error);
+      try {
+        const response = await instance.post("/coreclamp/timer/start", { 
+          startTime: newStartTime,
+          operator: operatorName 
         });
+        if (response.data.code === 0) {
+          const { todayTimers } = response.data.data;
+          setIsTimerRunning(true);
+          setTimeRecords(todayTimers);
+          setOperatorName("");
+        }
+      } catch (error) {
+        console.error("Error recording start time:", error);
+        toast.error("Failed to start timer");
+      }
     }
+  };
+
+  const handleModalOk = async () => {
+    if (isTimerRunning) {
+      // Stop the timer
+      try {
+        const response = await instance.post("/coreclamp/timer/stop", { 
+          notes: timerNotes,
+          endTime: new Date()
+        });
+        if (response.data.code === 0) {
+          const { todayTimers } = response.data.data;
+          setTimeRecords(todayTimers);
+          setTimerNotes("");
+          setIsModalVisible(false);
+        }
+      } catch (error) {
+        console.error("Error stopping timer:", error);
+        toast.error("Failed to stop timer");
+      }
+    } else {
+      // Start the timer
+      try {
+        const response = await instance.post("/coreclamp/timer/start", { 
+          operator: operatorName,
+          startTime: new Date()
+        });
+        if (response.data.code === 0) {
+          const { todayTimers } = response.data.data;
+          setTimeRecords(todayTimers);
+          setOperatorName("");
+          setIsModalVisible(false);
+        }
+      } catch (error) {
+        console.error("Error starting timer:", error);
+        toast.error("Failed to start timer");
+      }
+    }
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+    setTimerNotes("");
+    setOperatorName("");
   };
 
   const dataSource = isSearchFocused ? searchResult : ccList;
@@ -269,6 +335,47 @@ function CoreClamp() {
     }
   };
 
+  // Update the timer records display
+  const timeRecordsList = (
+    <Card title="Time Records" style={{ marginTop: 20 }}>
+      <List
+        bordered
+        dataSource={timeRecords}
+        renderItem={(record, index) => (
+          <List.Item
+            key={index}
+            style={{
+              padding: "4px 8px",
+              margin: "2px 0",
+            }}
+          >
+            <Row style={{ width: "100%" }}>
+              <Col span={12}>
+                <strong style={{ fontSize: "12px" }}>
+                  Record {timeRecords.length - index} {record.operator ? `- ${record.operator}` : ""}
+                </strong>
+              </Col>
+              <Col span={12}>
+                <div style={{ fontSize: "12px" }}>
+                  Start: {record.startTime ? new Date(record.startTime).toLocaleString() : "N/A"}
+                </div>
+                <div style={{ fontSize: "12px" }}>
+                  End: {record.endTime ? new Date(record.endTime).toLocaleString() : "In Progress"}
+                </div>
+                {record.notes && (
+                  <div style={{ fontSize: "12px", color: "#666" }}>
+                    Notes: {record.notes}
+                  </div>
+                )}
+              </Col>
+            </Row>
+          </List.Item>
+        )}
+        style={{ margin: "0" }}
+      />
+    </Card>
+  );
+
   return (
     <div>
       <Button
@@ -278,49 +385,30 @@ function CoreClamp() {
       >
         {isTimerRunning ? "Stop Timer" : "Start Timer"}
       </Button>
-      <Card title="Time Records" style={{ marginTop: 20 }}>
-        <List
-          bordered
-          dataSource={timeRecords}
-          renderItem={(record, index) => (
-            <List.Item
-              key={index}
-              style={{
-                padding: "4px 8px", // Reduced padding
-                margin: "2px 0", // Reduced margin
-              }}
-            >
-              <Row style={{ width: "100%" }}>
-                <Col span={12}>
-                  <strong style={{ fontSize: "12px" }}>
-                    Record {index + 1}
-                  </strong>{" "}
-                  {/* Smaller font size */}
-                </Col>
-                <Col span={12}>
-                  <div style={{ fontSize: "12px" }}>
-                    {" "}
-                    {/* Smaller font size */}
-                    Start:{" "}
-                    {record.startTime
-                      ? new Date(record.startTime).toLocaleString()
-                      : "N/A"}
-                  </div>
-                  <div style={{ fontSize: "12px" }}>
-                    {" "}
-                    {/* Smaller font size */}
-                    End:{" "}
-                    {record.endTime
-                      ? new Date(record.endTime).toLocaleString()
-                      : "In Progress"}
-                  </div>
-                </Col>
-              </Row>
-            </List.Item>
-          )}
-          style={{ margin: "0" }} // Remove extra margin around the List
-        />
-      </Card>
+      {timeRecordsList}
+
+      <Modal
+        title={isTimerRunning ? "Stop Timer" : "Start Timer"}
+        open={isModalVisible}
+        onOk={handleModalOk}
+        onCancel={handleModalCancel}
+      >
+        {isTimerRunning ? (
+          <Input.TextArea
+            placeholder="Enter notes about this timer session"
+            value={timerNotes}
+            onChange={(e) => setTimerNotes(e.target.value)}
+            rows={4}
+          />
+        ) : (
+          <Input
+            placeholder="Enter your name"
+            value={operatorName}
+            onChange={(e) => setOperatorName(e.target.value)}
+          />
+        )}
+      </Modal>
+
       <h4>To Do List</h4>
       <hr />
       <table className="table">

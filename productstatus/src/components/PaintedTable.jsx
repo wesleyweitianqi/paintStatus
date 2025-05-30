@@ -19,31 +19,37 @@ const PaintedTable = (props) => {
       title: "WO#",
       dataIndex: "wo",
       key: "wo",
+      width: 100,
     },
     {
       title: "Description",
       dataIndex: "description",
       key: "description",
+      width: 100,
     },
     {
       title: "Qty",
       dataIndex: "qty",
       key: "qty",
+      width: 50,
     },
     {
       title: "Moved To",
       dataIndex: "movedTo",
       key: "movedTo",
+      width: 150,
     },
     {
       title: "UpdatedAt",
       dataIndex: "updatedAt",
       key: "updatedAt",
+      width: 150,
     },
     {
       title: "Notes",
       dataIndex: "notes",
       key: "notes",
+      width: 300,
     },
     {
       title: "Action",

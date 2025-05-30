@@ -21,30 +21,46 @@ app.use((req, res, next) => {
   next();
 });
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     // Allow requests from localhost and your local network
-//     if (
-//       origin.match(/^http:\/\/localhost:[0-9]+$/) ||
-//       origin.match(/^http:\/\/192\.168\.\d+\.\d+$/)
-//     ) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error("Not allowed by CORS"));
-//     }
-//   },
-// };
 app.use(
   cors({
-    origin: "*",
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow localhost and local network IPs
+      const allowedOrigins = [
+        /^http:\/\/localhost:\d+$/,  // Any localhost port
+        /^http:\/\/192\.168\.\d+\.\d+:\d+$/,  // Any 192.168.x.x IP with any port
+        /^http:\/\/127\.0\.0\.1:\d+$/  // Any 127.0.0.1 port
+      ];
+      
+      // Check if the origin matches any of our patterns
+      const isAllowed = allowedOrigins.some(pattern => pattern.test(origin));
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true
   })
 );
 
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message
+  });
+});
+
 // Handle preflight request
 app.options("*", (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, OPTIONS"
@@ -53,6 +69,7 @@ app.options("*", (req, res) => {
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, X-Requested-With"
   );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.sendStatus(200);
 });
 

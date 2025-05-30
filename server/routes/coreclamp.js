@@ -7,6 +7,7 @@ const xlsx = require("xlsx");
 const path = require("path");
 const moment = require("moment-timezone");
 const TimeRecord = require("../models/timeRecord");
+const TimerRecord = require("../models/timerRecord");
 
 router.get("/list", async (req, res) => {
   console.log("get list");
@@ -279,6 +280,127 @@ router.get("/getTimeRecords", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send({ code: 1, message: "Error fetching time records" });
+  }
+});
+
+// Timer routes
+router.get("/timer/status", async (req, res) => {
+  try {
+    // Get the current running timer
+    const currentTimer = await TimerRecord.findOne({ isRunning: true }).sort({ startTime: -1 });
+    
+    // Get today's timer history
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const todayTimers = await TimerRecord.find({
+      startTime: { $gte: today, $lte: endOfDay }
+    }).sort({ startTime: -1 });
+
+    res.send({ 
+      code: 0, 
+      data: {
+        currentTimer,
+        todayTimers
+      }
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(500).send({ code: 1, message: "Error fetching timer status" });
+  }
+});
+
+router.post("/timer/start", async (req, res) => {
+  try {
+    // Stop any running timers
+    await TimerRecord.updateMany(
+      { isRunning: true },
+      { isRunning: false, endTime: new Date() }
+    );
+
+    // Start new timer
+    const newTimer = new TimerRecord({
+      startTime: req.body.startTime || new Date(),
+      isRunning: true,
+      operator: req.body.operator || null
+    });
+    await newTimer.save();
+
+    // Get updated timer history
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const todayTimers = await TimerRecord.find({
+      startTime: { $gte: today, $lte: endOfDay }
+    }).sort({ startTime: -1 });
+
+    res.send({ 
+      code: 0, 
+      data: {
+        currentTimer: newTimer,
+        todayTimers
+      }
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(500).send({ code: 1, message: "Error starting timer" });
+  }
+});
+
+router.post("/timer/stop", async (req, res) => {
+  try {
+    const currentTimer = await TimerRecord.findOne({ isRunning: true });
+    if (currentTimer) {
+      currentTimer.isRunning = false;
+      currentTimer.endTime = req.body.endTime || new Date();
+      currentTimer.notes = req.body.notes || null;
+      await currentTimer.save();
+
+      // Get updated timer history
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const todayTimers = await TimerRecord.find({
+        startTime: { $gte: today, $lte: endOfDay }
+      }).sort({ startTime: -1 });
+
+      res.send({ 
+        code: 0, 
+        data: {
+          currentTimer: null,
+          todayTimers
+        }
+      });
+    } else {
+      res.status(404).send({ code: 1, message: "No running timer found" });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(500).send({ code: 1, message: "Error stopping timer" });
+  }
+});
+
+router.get("/timer/history", async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const timers = await TimerRecord.find({
+      startTime: { $gte: today, $lte: endOfDay }
+    }).sort({ startTime: -1 });
+    
+    res.send({ code: 0, data: timers });
+  } catch (e) {
+    console.log(e);
+    res.status(500).send({ code: 1, message: "Error fetching timer history" });
   }
 });
 

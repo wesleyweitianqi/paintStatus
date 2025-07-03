@@ -6,6 +6,9 @@ import { RouterProvider } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import reportWebVitals from "./reportWebVitals";
 import router from "./router";
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+serviceWorkerRegistration.register(); // instead of unregister()
+
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

@@ -1,5 +1,5 @@
 // Default values for descriptions and locations
-const defaultDescriptionList = ["Enclosure", "Part", "Body", "Base", "Bracket"];
+const defaultDescriptionList = ["Enclosure", "Part", "Body", "Base", "Bracket", "Tiebar"];
 const defaultLocationList = ["45 Leading Rd", "85 Basaltic Rd", "65 Basaltic Rd"];
 
 // Load from localStorage or use default values

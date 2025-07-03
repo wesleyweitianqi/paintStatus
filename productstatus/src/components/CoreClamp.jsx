@@ -16,6 +16,7 @@ function CoreClamp() {
   const navigate = useNavigate();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
+  console.log(ccList);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [timeRecords, setTimeRecords] = useState([]);
@@ -378,7 +379,7 @@ function CoreClamp() {
 
   return (
     <div>
-      <Button
+      {/* <Button
         type="primary"
         onClick={handleTimerClick}
         className={isTimerRunning ? styles.stopButton : ""}
@@ -407,7 +408,7 @@ function CoreClamp() {
             onChange={(e) => setOperatorName(e.target.value)}
           />
         )}
-      </Modal>
+      </Modal> */}
 
       <h4>To Do List</h4>
       <hr />

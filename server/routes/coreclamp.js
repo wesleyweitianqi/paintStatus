@@ -12,7 +12,7 @@ const TimerRecord = require("../models/timerRecord");
 router.get("/list", async (req, res) => {
   console.log("get list");
   try {
-    const result = await CoreClamp.find({ isComplete: false }).sort({
+    const result = await CoreClamp.find({ isComplete: false, approvedBy: { $exists: true } }).sort({
       updatedAt: -1,
     });
     if (result) {

@@ -16,6 +16,21 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+// search painted by work order (partial, case-insensitive)
+router.get("/search", async (req, res) => {
+  try {
+    const { wo } = req.query;
+    const query = wo
+      ? { wo: { $regex: wo, $options: "i" } }
+      : {};
+    const list = await Painted.find(query).sort({ updatedAt: -1 });
+    res.send({ code: 0, data: list });
+  } catch (e) {
+    console.log(e);
+    res.send({ code: 1, data: [] });
+  }
+});
+
 router.post("/", async (req, res, next) => {
   try {
     const { wo, description, qty, movedTo, notes } = req.body;

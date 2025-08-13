@@ -16,6 +16,8 @@ const Status = () => {
   const [list, setList] = useState([]);
   const [descriptions, setDescriptions] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [searchWo, setSearchWo] = useState("");
+  const [isSearchResult, setIsSearchResult] = useState(false);
 
   useEffect(() => {
     // Load descriptions and locations from constants.js
@@ -35,16 +37,20 @@ const Status = () => {
     }
   };
 
-  const handleDelete = async (index) => {
-    console.log(index);
+  const handleDelete = async (wo) => {
+    console.log(wo);
     try {
-      const newList = [...list];
-      const [item] = newList.splice(index - 1, 1);
-      console.log(item)
-      await instance.post("/paint/delete", { wo: item.wo });
-      setList(newList);
+      const res = await instance.post("/paint/delete", { wo });
+      if(res.data && res.data.code === 0){
+        const newList = list.filter((item) => item.wo !== wo);
+        setList(newList);
+        message.success("Deleted successfully");
+      } else {
+        message.error("Failed to delete");
+      }
     } catch (error) {
       console.error("Error deleting item:", error);
+      message.error("Failed to delete");
     }
   };
   const saveTOExcel = () => {
@@ -53,6 +59,26 @@ const Status = () => {
         alert(res.data.message);
       }
     });
+  };
+
+  const handleSearch = async () => {
+    try {
+      const res = await instance.get(`/paint/search`, { params: { wo: searchWo } });
+      const data = res.data?.data || [];
+      if (data.length > 0) {
+        setList(data);
+        setIsSearchResult(true);
+      } else {
+        // reload full list if empty
+        const all = await instance.get("/paint");
+        setList(all.data?.data || []);
+        setIsSearchResult(false);
+        message.info("No results found; showing latest items");
+      }
+    } catch (e) {
+      console.error(e);
+      message.error("Search failed");
+    }
   };
 
   useEffect(() => {
@@ -70,10 +96,10 @@ const Status = () => {
     <div>
       <div className={styles.headContainer}>
         <h4>Painted Parts Entry</h4>
-        <Link to="/priority">
+        <Link to="/priority" target="_blank" rel="noopener noreferrer">
           <Button>To Priority List</Button>
         </Link>
-        <Link to="/setting">
+        <Link to="/setting" target="_blank" rel="noopener noreferrer">
           <FontAwesomeIcon icon={faGear} size="2x" />
         </Link>
       </div>
@@ -144,13 +170,25 @@ const Status = () => {
       <CurrentPaint />
       <div className={styles.headContainer}>
         <h4>Painted List</h4>
-        <Button onClick={() => saveTOExcel()}>Submit</Button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Input
+            placeholder="Search WO#"
+            value={searchWo}
+            onChange={(e) => setSearchWo(e.target.value)}
+            onPressEnter={handleSearch}
+            style={{ width: 200 }}
+          />
+          <Button type="primary" onClick={handleSearch}>Search</Button>
+          <Button onClick={() => saveTOExcel()}>Submit</Button>
+        </div>
       </div>
       <p>
         You will find the excel record at:{" "}
         <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong>
       </p>
-      <PaintedTable list={list} handleDelete={handleDelete} />
+      <div style={{ marginBottom: isSearchResult ? "10%" : 0 }}>
+        <PaintedTable list={list} handleDelete={handleDelete} />
+      </div>
     </div>
   );
 };

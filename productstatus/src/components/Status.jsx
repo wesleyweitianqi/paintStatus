@@ -66,6 +66,8 @@ const Status = () => {
       <h4>Core clamps cutting today</h4>
       <p>{todatCompleteCC.join(", ")}</p>
       <h4>WO paint completed Today</h4>
+      <h4>Core clamp History</h4>
+      <a href="http://192.168.1.34:8083/api/coreclamps/list" target="_blank">History</a>
     </div>
   );
 };

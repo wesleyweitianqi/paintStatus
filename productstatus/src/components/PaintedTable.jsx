@@ -6,12 +6,7 @@ const PaintedTable = (props) => {
   const isToday = (date) => {
     const currentDate = new Date();
     const updatedDate = new Date(date);
-    updatedDate.setHours(updatedDate.getHours() + 4);
-    return (
-      updatedDate.getFullYear() === currentDate.getFullYear() &&
-      updatedDate.getMonth() === currentDate.getMonth() &&
-      updatedDate.getDate() === currentDate.getDate()
-    );
+    return updatedDate.toDateString() === currentDate.toDateString();
   };
 
   const columns = [
@@ -44,6 +39,7 @@ const PaintedTable = (props) => {
       dataIndex: "updatedAt",
       key: "updatedAt",
       width: 150,
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       title: "Notes",
@@ -57,24 +53,30 @@ const PaintedTable = (props) => {
       key: "x",
       render: (record) =>
         isToday(record.updatedAt) ? (
-          <Button onClick={() => handleDelete(record.key)}>Delete</Button>
+          <Button onClick={() => handleDelete(record.wo)}>Delete</Button>
         ) : null,
     },
   ];
 
+  const latest = Array.isArray(list)
+    ? [...list]
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .slice(0, 50)
+    : [];
+
   const data =
-    Array.isArray(list) &&
-    list.map((item, index) => {
+    Array.isArray(latest) &&
+    latest.map((item, index) => {
       return {
         key: index + 1,
         wo: item.wo,
         description: item.description,
         qty: item.qty,
         movedTo: item.movedTo,
-        updatedAt: item.updatedAt.toString().substring(0, 10),
+        updatedAt: item.updatedAt,
         notes: item.notes,
 
-        createdAt: item.createdAt.toString().substring(0, 10),
+        createdAt: item.createdAt,
       };
     });
 

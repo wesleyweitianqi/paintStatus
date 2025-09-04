@@ -38,6 +38,7 @@ const PaintedTable = (props) => {
         return;
       }
       
+      // Pass original WO for finding the record, and all form values for updating
       await handleEdit(editingRecord.wo, values);
       setIsEditModalVisible(false);
       setEditingRecord(null);

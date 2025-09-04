@@ -332,29 +332,25 @@ router.post("/updatepaintjob", async (req, res) => {
 
 router.post("/changeorder", async (req, res) => {
   try {
-    console.log("🔥 POST /changeorder route hit!");
-    console.log("🔥 Request method:", req.method);
-    console.log("🔥 Request body:", req.body);
+    const { originalWo, updateData } = req.body;
     
-    const { wo, ...updateData } = req.body;
-    console.log("🚀 ~ router.post ~ wo:", wo, "updateData:", updateData);
+    // First, check if the document exists using the original work order
+    const existingDoc = await Painted.findOne({ wo: originalWo });
+    if (!existingDoc) {
+      return res.send({ code: 1, message: "Work order not found" });
+    }
     
     // Update the Painted collection with all provided fields
+    // upsert: false ensures no new record is created if the document doesn't exist
     const result = await Painted.findOneAndUpdate(
-      { wo: wo },
+      { wo: originalWo },
       { $set: updateData },
-      { new: true }
+      { new: true, upsert: false }
     );
     
-    if (result) {
-      console.log("✅ Successfully updated Painted collection:", result);
-      res.send({ code: 0, message: "Painted part updated successfully", data: result });
-    } else {
-      console.log("❌ No document found with wo:", wo);
-      res.send({ code: 1, message: "Work order not found" });
-    }
+    res.send({ code: 0, message: "Painted part updated successfully", data: result });
   } catch (e) {
-    console.log("❌ Error in changeorder:", e);
+    console.log("Error in changeorder:", e);
     res.send({ code: 1, message: "Error updating painted part", error: e.message });
   }
 });

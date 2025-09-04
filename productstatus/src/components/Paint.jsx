@@ -62,9 +62,12 @@ const Status = () => {
     }
   };
 
-  const handleEdit = async (wo, updateData) => {
+  const handleEdit = async (originalWo, updateData) => {
     try {
-      const res = await instance.post("/paint/changeorder", { wo, ...updateData });
+      const res = await instance.post("/paint/changeorder", { 
+        originalWo, 
+        updateData 
+      });
       if(res.data && res.data.code === 0){
         // Refresh the entire list from the server to ensure data consistency
         const refreshRes = await instance.get("/paint");
@@ -74,7 +77,7 @@ const Status = () => {
         } else {
           // Fallback: update local state if refresh fails
           const updatedList = list.map((item) => 
-            item.wo === wo ? { ...item, ...updateData } : item
+            item.wo === originalWo ? { ...item, ...updateData } : item
           );
           setList(updatedList);
           message.success("Painted part updated successfully");

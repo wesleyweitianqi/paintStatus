@@ -3,5 +3,12 @@
 GET http://localhost:8082/paint/savetoexcel/2025-03-06
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NDU1YjQ5ODQ3OTYzOGQzMTk0MjMxN2MiLCJpYXQiOjE3NDA2NjUzODF9.u5nQDFvdk1YDAcY7zp0RIfnfu1FSRBv35Nyf4QPAqfk
 
-
+#change order of paint job
+POST http://192.168.1.34:8082/paint/changeorder
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NDU1YjQ5ODQ3OTYzOGQzMTk0MjMxN2MiLCJpYXQiOjE3NDA2NjUzODF9.u5nQDFvdk1YDAcY7zp0RIfnfu1FSRBv35Nyf4QPAqfk
+{
+  "wo": "G02098",
+  "newOrder": "G020981"
+}
 

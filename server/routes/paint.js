@@ -321,4 +321,21 @@ router.post("/updatepaintjob", async (req, res) => {
   }
 });
 
+router.post("/changeorder", async (req, res) => {
+  try {
+    //i should pass the wo and the new order
+    const { wo, newOrder } = req.body;
+
+    const result = await PaintPriority.findOneAndUpdate(
+      { wo: wo },
+      { $set: { wo: newOrder } },
+      { new: true }
+    );
+    res.send({ code: 0, message: "Paint job order changed successfully" });
+  } catch (e) {
+    console.log(e);
+    res.send({ code: 1, message: "Error changing paint job order", error: e.message });
+  }
+});
+
 module.exports = router;

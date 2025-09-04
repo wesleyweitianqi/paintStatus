@@ -38,19 +38,53 @@ const Status = () => {
   };
 
   const handleDelete = async (wo) => {
-    console.log(wo);
+    console.log("🗑️ Deleting work order:", wo);
     try {
       const res = await instance.post("/paint/delete", { wo });
       if(res.data && res.data.code === 0){
-        const newList = list.filter((item) => item.wo !== wo);
-        setList(newList);
-        message.success("Deleted successfully");
+        // Refresh the entire list from the server to ensure data consistency
+        const refreshRes = await instance.get("/paint");
+        if(refreshRes.data && refreshRes.data.code === 0) {
+          setList(refreshRes.data.data);
+          message.success("Work order deleted successfully");
+        } else {
+          // Fallback: update local state if refresh fails
+          const newList = list.filter((item) => item.wo !== wo);
+          setList(newList);
+          message.success("Work order deleted successfully");
+        }
       } else {
-        message.error("Failed to delete");
+        message.error(res.data?.message || "Failed to delete work order");
       }
     } catch (error) {
       console.error("Error deleting item:", error);
-      message.error("Failed to delete");
+      message.error("Failed to delete work order");
+    }
+  };
+
+  const handleEdit = async (wo, updateData) => {
+    try {
+      const res = await instance.post("/paint/changeorder", { wo, ...updateData });
+      if(res.data && res.data.code === 0){
+        // Refresh the entire list from the server to ensure data consistency
+        const refreshRes = await instance.get("/paint");
+        if(refreshRes.data && refreshRes.data.code === 0) {
+          setList(refreshRes.data.data);
+          message.success("Painted part updated successfully");
+        } else {
+          // Fallback: update local state if refresh fails
+          const updatedList = list.map((item) => 
+            item.wo === wo ? { ...item, ...updateData } : item
+          );
+          setList(updatedList);
+          message.success("Painted part updated successfully");
+        }
+      } else {
+        message.error(res.data?.message || "Failed to update painted part");
+      }
+    } catch (error) {
+      console.error("Error updating painted part:", error);
+      message.error("Failed to update painted part");
     }
   };
   const saveTOExcel = () => {
@@ -187,7 +221,13 @@ const Status = () => {
         <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong>
       </p>
       <div style={{ marginBottom: isSearchResult ? "10%" : 0 }}>
-        <PaintedTable list={list} handleDelete={handleDelete} />
+        <PaintedTable 
+          list={list} 
+          handleDelete={handleDelete} 
+          handleEdit={handleEdit}
+          descriptions={descriptions}
+          locations={locations}
+        />
       </div>
     </div>
   );

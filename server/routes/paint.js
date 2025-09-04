@@ -53,11 +53,20 @@ router.post("/", async (req, res, next) => {
 router.post("/delete", async (req, res, next) => {
   try {
     const { wo } = req.body;
-    console.log(wo);
-    const list = await Painted.findOneAndDelete({ wo: wo });
-    res.send({ code: 0, data: list });
+    console.log("🗑️ Deleting work order:", wo);
+    
+    const result = await Painted.findOneAndDelete({ wo: wo });
+    
+    if (result) {
+      console.log("✅ Successfully deleted from Painted collection:", result);
+      res.send({ code: 0, message: "Work order deleted successfully", data: result });
+    } else {
+      console.log("❌ No document found with wo:", wo);
+      res.send({ code: 1, message: "Work order not found" });
+    }
   } catch (e) {
-    console.log(e);
+    console.log("❌ Error in delete:", e);
+    res.send({ code: 1, message: "Error deleting work order", error: e.message });
   }
 });
 
@@ -323,18 +332,30 @@ router.post("/updatepaintjob", async (req, res) => {
 
 router.post("/changeorder", async (req, res) => {
   try {
-    //i should pass the wo and the new order
-    const { wo, newOrder } = req.body;
-
-    const result = await PaintPriority.findOneAndUpdate(
+    console.log("🔥 POST /changeorder route hit!");
+    console.log("🔥 Request method:", req.method);
+    console.log("🔥 Request body:", req.body);
+    
+    const { wo, ...updateData } = req.body;
+    console.log("🚀 ~ router.post ~ wo:", wo, "updateData:", updateData);
+    
+    // Update the Painted collection with all provided fields
+    const result = await Painted.findOneAndUpdate(
       { wo: wo },
-      { $set: { wo: newOrder } },
+      { $set: updateData },
       { new: true }
     );
-    res.send({ code: 0, message: "Paint job order changed successfully" });
+    
+    if (result) {
+      console.log("✅ Successfully updated Painted collection:", result);
+      res.send({ code: 0, message: "Painted part updated successfully", data: result });
+    } else {
+      console.log("❌ No document found with wo:", wo);
+      res.send({ code: 1, message: "Work order not found" });
+    }
   } catch (e) {
-    console.log(e);
-    res.send({ code: 1, message: "Error changing paint job order", error: e.message });
+    console.log("❌ Error in changeorder:", e);
+    res.send({ code: 1, message: "Error updating painted part", error: e.message });
   }
 });
 

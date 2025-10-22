@@ -14,6 +14,7 @@ try {
         qty: Number,
         movedTo: String,
         notes: String,
+        address: String,
         complete: {
           type: Boolean,
           default: false,

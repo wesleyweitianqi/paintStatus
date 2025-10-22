@@ -19,7 +19,9 @@ const PaintedTable = (props) => {
       description: record.description,
       qty: record.qty,
       movedTo: record.movedTo,
-      notes: record.notes
+      notes: record.notes,
+      address: record.address,
+      address: record.address
     });
     setIsEditModalVisible(true);
   };
@@ -59,7 +61,7 @@ const PaintedTable = (props) => {
       title: "WO#",
       dataIndex: "wo",
       key: "wo",
-      width: 100,
+      width: 200,
     },
     {
       title: "Description",
@@ -93,6 +95,13 @@ const PaintedTable = (props) => {
       width: 300,
     },
     {
+      title: "Address",
+      dataIndex: "address",
+      key: "address",
+      width: 200,
+      render: (value) => value || "-",
+    },
+    {
       title: "Action",
       dataIndex: "",
       key: "x",
@@ -123,6 +132,7 @@ const PaintedTable = (props) => {
         movedTo: item.movedTo,
         updatedAt: item.updatedAt,
         notes: item.notes,
+        address: item.address,
 
         createdAt: item.createdAt,
       };
@@ -204,6 +214,13 @@ const PaintedTable = (props) => {
             name="notes"
           >
             <Input.TextArea rows={3} placeholder="Enter notes" />
+          </Form.Item>
+          
+          <Form.Item
+            label="Address"
+            name="address"
+          >
+            <Input placeholder="Enter address" />
           </Form.Item>
         </Form>
       </Modal>

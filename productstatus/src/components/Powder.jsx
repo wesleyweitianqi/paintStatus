@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Button,
@@ -8,25 +8,29 @@ import {
   Card,
   Typography,
   message,
+  Row,
+  Col,
+  Space,
 } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import instance from "../utils/http";
-import styles from "../styles/powder.module.scss";
 
 const { Title } = Typography;
+const { Option } = Select;
 
 const Powder = () => {
   const [list, setList] = useState([]);
-  console.log("🚀 ~ Powder ~ list:", list);
   const [editingKey, setEditingKey] = useState(null);
   const [editQty, setEditQty] = useState("");
   const [loading, setLoading] = useState(false);
-  const formRef = useRef(null);
+  const [searchText, setSearchText] = useState("");
+  const [form] = Form.useForm();
 
   const fetchPowderList = async () => {
     setLoading(true);
@@ -45,23 +49,50 @@ const Powder = () => {
     fetchPowderList();
   }, []);
 
-  const handleButtonClick = async (e) => {
-    e.preventDefault();
-    const formData = {
-      code: formRef.current.code.value,
-      qty: formRef.current.qty.value,
-      desc: formRef.current.desc.value,
-      supplier: formRef.current.supplier.value,
-    };
+  // Filter the list based on search text matching description
+  const filteredList = searchText
+    ? list.filter(
+        (item) =>
+          item.desc &&
+          item.desc.toLowerCase().includes(searchText.toLowerCase())
+      )
+    : list;
 
+  // Function to download powder list as Excel
+  const handleDownloadExcel = async () => {
     try {
-      const res = await instance.post("/powder/add", formData, {
+      const response = await instance.get("/powder/export/excel", {
+        responseType: "blob", // Important: Set response type to blob for file download
+      });
+
+      // Create a temporary URL for the blob and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "powder_inventory.xlsx");
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up the temporary URL and remove the link
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      message.success("Excel file downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading Excel:", error);
+      message.error("Failed to download Excel file");
+    }
+  };
+
+  const handleFormSubmit = async (values) => {
+    try {
+      const res = await instance.post("/powder/add", values, {
         headers: {
           "Content-Type": "application/json",
         },
       });
-      setList((prev) => [...prev, formData]);
-      formRef.current.reset();
+      fetchPowderList(); // Refresh the list
+      form.resetFields();
       message.success("Powder added successfully");
     } catch (error) {
       console.error("Error submitting the request:", error);
@@ -76,9 +107,7 @@ const Powder = () => {
         code: powderCode,
       });
       if (result.data.data) {
-        const newList = [...list];
-        newList.splice(key - 1, 1);
-        setList(newList);
+        fetchPowderList(); // Refresh the list
         message.success("Powder deleted successfully");
       }
     } catch (error) {
@@ -141,7 +170,7 @@ const Powder = () => {
               type="text"
               value={editQty}
               onChange={(e) => setEditQty(e.target.value)}
-              className="qty-input"
+              style={{ width: "80px" }}
             />
           );
         }
@@ -159,7 +188,7 @@ const Powder = () => {
       key: "action",
       width: "15%",
       render: (_, record) => (
-        <div className="action-buttons">
+        <Space size="middle">
           {editingKey === record.key ? (
             <>
               <Button
@@ -179,77 +208,126 @@ const Powder = () => {
                 type="text"
                 icon={<EditOutlined />}
                 onClick={() => startEdit(record)}
+                title="Edit"
               />
               <Button
                 type="text"
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => handleDelete(record.key)}
+                title="Delete"
               />
             </>
           )}
-        </div>
+        </Space>
       ),
     },
   ];
 
-  const data =
-    Array.isArray(list) &&
-    list.map((item, index) => ({
-      key: index + 1,
-      code: item.code,
-      desc: item.desc,
-      qty: item.qty,
-      supplier: item.supplier,
-    }));
-
   return (
-    <div>
-      <h4>Powder Inventory</h4>
-      <form
-        className={styles.powderForm}
-        ref={formRef}
-        // onSubmit={handleButtonClick}
+    <Card>
+      <Title level={3} style={{ marginBottom: 24, color: "#1890ff" }}>
+        Powder Inventory
+      </Title>
+
+      <Card type="inner" title="Add New Powder" style={{ marginBottom: 24 }}>
+        <Form form={form} layout="vertical" onFinish={handleFormSubmit}>
+          <Row gutter={16}>
+            <Col span={6}>
+              <Form.Item
+                name="code"
+                label="Code#"
+                rules={[
+                  { required: true, message: "Please input powder code!" },
+                ]}
+              >
+                <Input placeholder="Enter powder code" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name="qty"
+                label="Quantity"
+                rules={[{ required: true, message: "Please input quantity!" }]}
+              >
+                <Input placeholder="Enter quantity" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name="desc"
+                label="Description"
+                rules={[
+                  { required: true, message: "Please input description!" },
+                ]}
+              >
+                <Input placeholder="Enter description" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name="supplier"
+                label="Supplier"
+                rules={[
+                  { required: true, message: "Please select a supplier!" },
+                ]}
+              >
+                <Select placeholder="Select supplier">
+                  <Option value="sw">Sherwin William</Option>
+                  <Option value="Tiger">Tiger</Option>
+                  <Option value="Prism">Prism</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
+              Add Powder
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <Card
+        type="inner"
+        title="Powder Inventory List"
+        extra={
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadExcel}
+          >
+            Export to Excel
+          </Button>
+        }
       >
-        <div className="col-2">
-          <div className="row">
-            <label>Code#</label>
-            <input type="text" placeholder="powder code" name="code" />
-          </div>
+        <div style={{ marginBottom: 16 }}>
+          <Input
+            placeholder="Search by color in description..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 300 }}
+            allowClear
+          />
         </div>
-        <div className="col-2">
-          <div className="row">
-            <label>Qty</label>
-            <input type="text" placeholder="qty" name="qty" />
-          </div>
-        </div>
-        <div className="col-2">
-          <div className="row">
-            <label>Description</label>
-            <input type="text" placeholder="desc" name="desc" />
-          </div>
-        </div>
-        <div className="col-2">
-          <div className="row">
-            <label>Supplier</label>
-            <select id="supplier" name="supplier">
-              <option value="sw">Sherwin William</option>
-              <option value="Tiger">Tiger</option>
-              <option value="Prism">prism</option>
-            </select>
-          </div>
-        </div>
-        <Button color="default" type="primary" onClick={handleButtonClick}>
-          Submit
-        </Button>
-      </form>
-      <Table
-        columns={columns}
-        rowKey={(record) => record.key}
-        dataSource={data}
-        pagination={false}
-      />
-    </div>
+        <Table
+          columns={columns}
+          rowKey={(record) => record.key}
+          dataSource={
+            Array.isArray(filteredList) &&
+            filteredList.map((item, index) => ({
+              key: index + 1,
+              code: item.code,
+              desc: item.desc,
+              qty: item.qty,
+              supplier: item.supplier,
+            }))
+          }
+          pagination={false}
+          loading={loading}
+        />
+      </Card>
+    </Card>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, Select, message } from "antd";
+import { Table, Button, Modal, Form, Input, Select, message, Space } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 
 const PaintedTable = (props) => {
   const { list, handleDelete, handleEdit, descriptions, locations } = props;
@@ -20,7 +21,6 @@ const PaintedTable = (props) => {
       qty: record.qty,
       movedTo: record.movedTo,
       notes: record.notes,
-      address: record.address,
       address: record.address
     });
     setIsEditModalVisible(true);
@@ -99,7 +99,17 @@ const PaintedTable = (props) => {
       dataIndex: "address",
       key: "address",
       width: 200,
-      render: (value) => value || "-",
+      render: (value, record) => (
+        <Space>
+          {value || "-"}
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => handleEditClick(record)}
+            size="small"
+          />
+        </Space>
+      ),
     },
     {
       title: "Action",
@@ -111,13 +121,15 @@ const PaintedTable = (props) => {
             <Button onClick={() => handleEditClick(record)}>Edit</Button>
             <Button onClick={() => handleDelete(record.wo)}>Delete</Button>
           </div>
-        ) : null,
+        ) : (
+          <Button onClick={() => handleEditClick(record)}>Edit</Button>
+        ),
     },
   ];
 
   const latest = Array.isArray(list)
     ? [...list]
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 50)
     : [];
 

@@ -25,6 +25,39 @@ const PaintedTable = (props) => {
     });
     setIsEditModalVisible(true);
   };
+  
+  // Specific function to edit only the address field
+  const [isAddressEditModalVisible, setIsAddressEditModalVisible] = useState(false);
+  const [editingAddressRecord, setEditingAddressRecord] = useState(null);
+  const [addressForm] = Form.useForm();
+  
+  const handleAddressEditClick = (record) => {
+    setEditingAddressRecord(record);
+    addressForm.setFieldsValue({
+      address: record.address
+    });
+    setIsAddressEditModalVisible(true);
+  };
+  
+  const handleAddressEditModalOk = async () => {
+    try {
+      const values = await addressForm.validateFields();
+      // Update only the address field
+      const updateData = { address: values.address };
+      await props.handleEdit(editingAddressRecord.wo, updateData);
+      setIsAddressEditModalVisible(false);
+      setEditingAddressRecord(null);
+      addressForm.resetFields();
+    } catch (error) {
+      console.error("Validation failed:", error);
+    }
+  };
+
+  const handleAddressEditModalCancel = () => {
+    setIsAddressEditModalVisible(false);
+    setEditingAddressRecord(null);
+    addressForm.resetFields();
+  };
 
   const handleEditModalOk = async () => {
     try {
@@ -105,7 +138,7 @@ const PaintedTable = (props) => {
           <Button 
             type="text" 
             icon={<EditOutlined />} 
-            onClick={() => handleEditClick(record)}
+            onClick={() => handleAddressEditClick(record)}
             size="small"
           />
         </Space>
@@ -116,14 +149,12 @@ const PaintedTable = (props) => {
       dataIndex: "",
       key: "x",
       render: (record) =>
-        isToday(record.updatedAt) ? (
+        isToday(record.createdAt) ? (
           <div style={{ display: "flex", gap: "8px" }}>
             <Button onClick={() => handleEditClick(record)}>Edit</Button>
             <Button onClick={() => handleDelete(record.wo)}>Delete</Button>
           </div>
-        ) : (
-          <Button onClick={() => handleEditClick(record)}>Edit</Button>
-        ),
+        ) : null,
     },
   ];
 
@@ -231,6 +262,26 @@ const PaintedTable = (props) => {
           <Form.Item
             label="Address"
             name="address"
+          >
+            <Input placeholder="Enter address" />
+          </Form.Item>
+        </Form>
+      </Modal>
+      
+      <Modal
+        title="Edit Address"
+        open={isAddressEditModalVisible}
+        onOk={handleAddressEditModalOk}
+        onCancel={handleAddressEditModalCancel}
+        okText="Update Address"
+        cancelText="Cancel"
+        width={400}
+      >
+        <Form form={addressForm} layout="vertical">
+          <Form.Item
+            label="Address"
+            name="address"
+            rules={[{ required: true, message: "Please enter address" }]}
           >
             <Input placeholder="Enter address" />
           </Form.Item>

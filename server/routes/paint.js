@@ -52,16 +52,23 @@ router.post("/", async (req, res, next) => {
 
 router.post("/delete", async (req, res, next) => {
   try {
-    const { wo } = req.body;
-    console.log("🗑️ Deleting work order:", wo);
+    const { wo, id } = req.body;
+    console.log("🗑️ Deleting work order:", wo, "with id:", id);
     
-    const result = await Painted.findOneAndDelete({ wo: wo });
+    let result;
+    if (id) {
+      // If id is provided, use it to delete the specific record
+      result = await Painted.findOneAndDelete({ _id: id });
+    } else {
+      // Fallback to the old method using WO if no ID provided
+      result = await Painted.findOneAndDelete({ wo: wo });
+    }
     
     if (result) {
       console.log("✅ Successfully deleted from Painted collection:", result);
       res.send({ code: 0, message: "Work order deleted successfully", data: result });
     } else {
-      console.log("❌ No document found with wo:", wo);
+      console.log("❌ No document found with", id ? `_id: ${id}` : `wo: ${wo}`);
       res.send({ code: 1, message: "Work order not found" });
     }
   } catch (e) {
@@ -334,21 +341,41 @@ router.post("/changeorder", async (req, res) => {
   try {
     const { originalWo, updateData } = req.body;
     
-    // First, check if the document exists using the original work order
-    const existingDoc = await Painted.findOne({ wo: originalWo });
-    if (!existingDoc) {
-      return res.send({ code: 1, message: "Work order not found" });
+    // Check if the updateData contains a record ID for more precise targeting
+    if (updateData._id) {
+      // If _id is provided, remove it from updateData as we don't want to update the _id
+      const { _id, ...updateFields } = updateData;
+      
+      // Use the _id to find and update the specific record
+      const result = await Painted.findOneAndUpdate(
+        { _id: _id },
+        { $set: updateFields },
+        { new: true, upsert: false }
+      );
+      
+      if (!result) {
+        return res.send({ code: 1, message: "Record not found" });
+      }
+      
+      res.send({ code: 0, message: "Painted part updated successfully", data: result });
+    } else {
+      // Fallback to the old method using WO if no ID provided (for backward compatibility)
+      // First, check if the document exists using the original work order
+      const existingDoc = await Painted.findOne({ wo: originalWo });
+      if (!existingDoc) {
+        return res.send({ code: 1, message: "Work order not found" });
+      }
+      
+      // Update the Painted collection with all provided fields
+      // upsert: false ensures no new record is created if the document doesn't exist
+      const result = await Painted.findOneAndUpdate(
+        { wo: originalWo },
+        { $set: updateData },
+        { new: true, upsert: false }
+      );
+      
+      res.send({ code: 0, message: "Painted part updated successfully", data: result });
     }
-    
-    // Update the Painted collection with all provided fields
-    // upsert: false ensures no new record is created if the document doesn't exist
-    const result = await Painted.findOneAndUpdate(
-      { wo: originalWo },
-      { $set: updateData },
-      { new: true, upsert: false }
-    );
-    
-    res.send({ code: 0, message: "Painted part updated successfully", data: result });
   } catch (e) {
     console.log("Error in changeorder:", e);
     res.send({ code: 1, message: "Error updating painted part", error: e.message });

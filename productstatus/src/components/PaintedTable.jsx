@@ -43,7 +43,7 @@ const PaintedTable = (props) => {
     try {
       const values = await addressForm.validateFields();
       // Update only the address field
-      const updateData = { address: values.address };
+      const updateData = { address: values.address, _id: editingAddressRecord._id };
       await props.handleEdit(editingAddressRecord.wo, updateData);
       setIsAddressEditModalVisible(false);
       setEditingAddressRecord(null);
@@ -73,8 +73,9 @@ const PaintedTable = (props) => {
         return;
       }
       
-      // Pass original WO for finding the record, and all form values for updating
-      await handleEdit(editingRecord.wo, values);
+      // Pass original WO for finding the record, and all form values for updating, plus the record ID
+      const updateData = { ...values, _id: editingRecord._id };
+      await handleEdit(editingRecord.wo, updateData);
       setIsEditModalVisible(false);
       setEditingRecord(null);
       form.resetFields();
@@ -152,7 +153,7 @@ const PaintedTable = (props) => {
         isToday(record.createdAt) ? (
           <div style={{ display: "flex", gap: "8px" }}>
             <Button onClick={() => handleEditClick(record)}>Edit</Button>
-            <Button onClick={() => handleDelete(record.wo)}>Delete</Button>
+            <Button onClick={() => handleDelete(record._id)}>Delete</Button>
           </div>
         ) : null,
     },
@@ -169,6 +170,7 @@ const PaintedTable = (props) => {
     latest.map((item, index) => {
       return {
         key: index + 1,
+        _id: item._id,
         wo: item.wo,
         description: item.description,
         qty: item.qty,

@@ -37,10 +37,10 @@ const Status = () => {
     }
   };
 
-  const handleDelete = async (wo) => {
-    console.log("🗑️ Deleting work order:", wo);
+  const handleDelete = async (recordId) => {
+    console.log("🗑️ Deleting work order with id:", recordId);
     try {
-      const res = await instance.post("/paint/delete", { wo });
+      const res = await instance.post("/paint/delete", { id: recordId });
       if(res.data && res.data.code === 0){
         // Refresh the entire list from the server to ensure data consistency
         const refreshRes = await instance.get("/paint");
@@ -49,7 +49,7 @@ const Status = () => {
           message.success("Work order deleted successfully");
         } else {
           // Fallback: update local state if refresh fails
-          const newList = list.filter((item) => item.wo !== wo);
+          const newList = list.filter((item) => item._id !== recordId);
           setList(newList);
           message.success("Work order deleted successfully");
         }
@@ -75,10 +75,17 @@ const Status = () => {
           setList(refreshRes.data.data);
           message.success("Painted part updated successfully");
         } else {
-          // Fallback: update local state if refresh fails
-          const updatedList = list.map((item) => 
-            item.wo === originalWo ? { ...item, ...updateData } : item
-          );
+          // Fallback: update local state if refresh fails - use the record's _id if available, otherwise use WO
+          let updatedList;
+          if (updateData._id) {
+            updatedList = list.map((item) => 
+              item._id === updateData._id ? { ...item, ...updateData } : item
+            );
+          } else {
+            updatedList = list.map((item) => 
+              item.wo === originalWo ? { ...item, ...updateData } : item
+            );
+          }
           setList(updatedList);
           message.success("Painted part updated successfully");
         }

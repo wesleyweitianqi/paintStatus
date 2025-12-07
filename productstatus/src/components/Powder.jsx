@@ -57,6 +57,7 @@ const Powder = () => {
           item.desc.toLowerCase().includes(searchText.toLowerCase())
       )
     : list;
+    console.log("Filtered List:", filteredList);
 
   // Function to download powder list as Excel
   const handleDownloadExcel = async () => {
@@ -182,6 +183,19 @@ const Powder = () => {
       dataIndex: "supplier",
       key: "supplier",
       width: "15%",
+    },
+    {      
+      title: "UpdateAt",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      width: "15%",
+      render: (text) => text ? new Date(text).toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : 'N/A',
     },
     {
       title: "Action",
@@ -320,6 +334,7 @@ const Powder = () => {
               code: item.code,
               desc: item.desc,
               qty: item.qty,
+              updatedAt: item.updatedAt,
               supplier: item.supplier,
             }))
           }

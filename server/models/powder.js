@@ -15,7 +15,12 @@ const powderSchema = new mongoose.Schema({
   desc: {
     type: String,
   },
-});
+  
+},{ timestamps: true});
+
+// Create indexes for better query performance
+powderSchema.index({ createdAt: -1 });
+powderSchema.index({ updatedAt: -1 });
 
 const Powder = mongoose.model("powder", powderSchema);
 

@@ -1,130 +1,132 @@
-.settings-container {
-  padding: 24px;
+.current-paint-panel {
   background: #fff;
-  min-height: 100%;
-}
-
-.settings-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.settings-header h2 {
-  margin: 0;
-  color: #1f1f1f;
-  font-weight: 600;
-}
-
-.settings-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-}
-
-.settings-card {
-  height: 100%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03),
-              0 2px 4px rgba(0, 0, 0, 0.03),
-              0 4px 8px rgba(0, 0, 0, 0.03);
+  border: 1px solid #dbe3ed;
   border-radius: 8px;
+  height: 100%;
+  padding: 16px;
 }
 
-.card-header {
+.current-paint-header {
+  align-items: flex-start;
   display: flex;
-  align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-.card-header h3 {
-  margin: 0;
-  color: #1f1f1f;
+.current-paint-kicker {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.current-paint-header h3 {
+  align-items: center;
+  color: #0f172a;
+  display: flex;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
+  gap: 8px;
+  margin: 2px 0 0;
 }
 
-.card-icon {
-  font-size: 20px;
-  color: #1890ff;
-}
-
-.paint-radio-group {
-  width: 100%;
-}
-
-.paint-options {
-  width: 100%;
-}
-
-.paint-options .ant-radio-wrapper {
+.current-paint-header .ant-tag {
   margin-right: 0;
-  padding: 8px 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.special-color-input {
-  margin-left: 8px;
-  width: 160px;
+.paint-choice-group {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.paint-choice-group .ant-radio-button-wrapper {
+  border: 1px solid #d9e2ec !important;
+  border-radius: 6px;
+  height: 34px;
+  line-height: 32px;
+  overflow: hidden;
+  padding: 0 8px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paint-choice-group .ant-radio-button-wrapper:not(:first-child)::before {
+  display: none;
+}
+
+.paint-choice-group .ant-radio-button-wrapper-checked {
+  border-color: #1677ff !important;
+}
+
+.special-color-row {
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.schedule-header {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.schedule-header span {
+  align-items: center;
+  color: #334155;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.schedule-form .ant-form-item {
+  margin-bottom: 8px;
 }
 
 .schedule-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 8px;
 }
 
-.schedule-form .ant-form-item {
-  margin-bottom: 16px;
+.schedule-grid .ant-form-item-label {
+  padding-bottom: 2px;
 }
 
-.submit-button {
-  margin-top: 24px;
+.schedule-grid .ant-form-item-label > label {
+  color: #475569;
+  font-size: 12px;
+  height: auto;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .settings-content {
-    grid-template-columns: 1fr;
+.schedule-grid .ant-select {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .schedule-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  
+}
+
+@media (max-width: 640px) {
+  .current-paint-header {
+    flex-direction: column;
+  }
+
+  .paint-choice-group,
   .schedule-grid {
     grid-template-columns: 1fr;
   }
 }
-
-/* Hover effects */
-.settings-card:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05),
-              0 4px 8px rgba(0, 0, 0, 0.05),
-              0 8px 16px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.3s ease;
-}
-
-.ant-radio-wrapper:hover {
-  background-color: rgba(24, 144, 255, 0.1);
-  border-radius: 4px;
-}
-
-/* Animation */
-.settings-card {
-  transition: all 0.3s ease;
-}
-
-/* Custom scrollbar */
-.settings-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.settings-container::-webkit-scrollbar-track {
-  background: #f0f0f0;
-}
-
-.settings-container::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
-  border-radius: 3px;
-}
-
-.settings-container::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
-} 

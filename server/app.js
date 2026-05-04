@@ -11,6 +11,8 @@ const shippingRounter = require("./routes/shipping");
 const powderRouter = require("./routes/powder");
 const coreclampRouter = require("./routes/coreclamp");
 const bendRouter = require("./routes/bend");
+const errorLogRouter = require("./routes/errorLog");
+const shiftEfficiencyRouter = require("./routes/shiftEfficiency");
 
 var app = express();
 app.use(express.urlencoded({ extended: false }));
@@ -76,6 +78,7 @@ app.options("*", (req, res) => {
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/upload", express.static(path.join(__dirname, "upload")));
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
@@ -84,5 +87,7 @@ app.use("/shipping", shippingRounter);
 app.use("/powder", powderRouter);
 app.use("/coreclamp", coreclampRouter);
 app.use("/bend", bendRouter);
+app.use("/errorlog", errorLogRouter);
+app.use("/shiftefficiency", shiftEfficiencyRouter);
 
 module.exports = app;

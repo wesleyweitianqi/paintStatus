@@ -1,55 +1,245 @@
-h4 {
-  text-align: left;
-  margin-top: 1rem;
-}
-
-p {
+.corePage {
+  color: #0f172a;
+  padding: 20px 0 40px;
   text-align: left;
 }
 
-.listContainer {
-  margin-bottom: 10%;
+.pageHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
 }
 
-.searchButton {
-  position: absolute;
-  top: 50%;
-  left: 2.5%;
+.kicker {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
-.todayCompleteContainer {
-  display: flex; // Use flexbox
+.pageTitle {
+  color: #0f172a !important;
+  margin: 2px 0 0 !important;
+}
+
+.headerActions {
+  justify-content: flex-end;
+}
+
+.statGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.statCard,
+.timerCard,
+.statusCard,
+.dashboardCard {
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+}
+
+.statCard :global(.ant-card-body) {
+  padding: 14px 16px;
+}
+
+.statCard :global(.ant-statistic-title) {
+  color: #475569;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.statCard :global(.ant-statistic-content) {
+  color: #111827;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.controlGrid {
+  align-items: stretch;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  margin-bottom: 16px;
+}
+
+.timerCard {
+  border-left-width: 5px;
+}
+
+.timerRunning {
+  border-left-color: #16a34a;
+}
+
+.timerStopped {
+  border-left-color: #64748b;
+}
+
+.timerCard :global(.ant-card-body),
+.statusCard :global(.ant-card-body),
+.dashboardCard :global(.ant-card-body) {
+  padding: 16px;
+}
+
+.timerHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.panelLabel {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.timerStatus {
+  align-items: center;
+  color: #0f172a;
+  display: flex;
+  font-size: 26px;
+  font-weight: 800;
+  gap: 8px;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.timerRunning .timerStatus {
+  color: #15803d;
+}
+
+.timerMeta {
+  color: #64748b;
+  display: flex;
   flex-direction: column;
-  flex-wrap: wrap; // Allow items to wrap to the next line if there's not enough space
-  gap: 16px; // Add space between the items
+  font-size: 12px;
+  gap: 3px;
+  margin-bottom: 12px;
 }
 
-.todayCompleteContainer > div {
-  flex: 1; // Allow each item to grow and take available space
-  min-width: 200px; // Prevent items from being too small, you can adjust this
-  background-color: #f0f0f0; // Optional styling
-  padding: 8px; // Optional padding inside each item
-  text-align: left; // Optional, center the text inside the item
-  border: 1px solid #ddd; // Optional border around each item
-  Button {
-    margin-left: 1rem;
+.statusCard :global(.ant-statistic-title) {
+  color: #475569;
+  font-size: 12px;
+}
+
+.statusCard :global(.ant-statistic-content) {
+  color: #111827;
+  font-size: 21px;
+}
+
+.statusCard :global(.ant-statistic-content-prefix) {
+  color: #2563eb;
+  margin-right: 8px;
+}
+
+.dashboardCard {
+  margin-bottom: 16px;
+}
+
+.dashboardCard :global(.ant-card-head) {
+  min-height: 44px;
+}
+
+.dashboardCard :global(.ant-card-head-title) {
+  color: #0f172a;
+  font-weight: 700;
+  padding: 11px 0;
+}
+
+.cardTitle {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.tableToolbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  width: 300px;
+}
+
+.listStatus {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.dashboardCard :global(.ant-table-thead > tr > th) {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  padding: 10px 12px;
+}
+
+.dashboardCard :global(.ant-table-tbody > tr > td) {
+  padding: 9px 12px;
+  vertical-align: middle;
+}
+
+.dashboardCard :global(.ant-table-tbody > tr:hover > td) {
+  background: #f8fafc;
+}
+
+.fileLink {
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #1d4ed8;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 3px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileLink:hover {
+  background: #e0f2fe;
+  color: #1d4ed8;
+}
+
+@media (max-width: 1120px) {
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controlGrid {
+    grid-template-columns: 1fr;
   }
 }
 
-.labelPattern {
-  display: flex; // Use flexbox
-  justify-content: space-around;
-  align-items: center; // Center the text vertically
-}
+@media (max-width: 760px) {
+  .pageHeader,
+  .tableToolbar,
+  .timerHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-.finishToday {
-  display: flex; // Use flexbox
+  .headerActions,
+  .searchInput {
+    width: 100%;
+  }
 
-  align-items: end; //
-}
-
-.stopButton {
-  background-color: red !important;
-  border-color: red !important;
-  color: white !important;
+  .statGrid {
+    grid-template-columns: 1fr;
+  }
 }

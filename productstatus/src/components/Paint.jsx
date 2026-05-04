@@ -1,58 +1,137 @@
-import React, { useEffect, useState } from "react";
-import { Form, Input, Button, Row, Col, Select } from "antd";
-import PaintedTable from "./PaintedTable.jsx";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear } from "@fortawesome/free-solid-svg-icons"; // or free-regular-svg-icons
-import { message } from "antd";
-
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Typography,
+  message,
+} from "antd";
+import {
+  FileExcelOutlined,
+  OrderedListOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import instance from "../utils/http.js";
+import PaintedTable from "./PaintedTable.jsx";
 import CurrentPaint from "./CurrentPaint.jsx";
+import instance from "../utils/http.js";
 import styles from "../styles/painted.module.scss";
 import { loadDescriptionList, loadLocationList } from "../utils/constants.js";
-const { Option } = Select;
 
-const Status = () => {
+const { Option } = Select;
+const { Text, Title } = Typography;
+
+const isSameDay = (date) => {
+  if (!date) {
+    return false;
+  }
+
+  const today = new Date();
+  const targetDate = new Date(date);
+  return targetDate.toDateString() === today.toDateString();
+};
+
+const formatShortDateTime = (date) => {
+  if (!date) {
+    return "No data";
+  }
+
+  return new Date(date).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const Paint = () => {
+  const [form] = Form.useForm();
   const [list, setList] = useState([]);
   const [descriptions, setDescriptions] = useState([]);
   const [locations, setLocations] = useState([]);
   const [searchWo, setSearchWo] = useState("");
   const [isSearchResult, setIsSearchResult] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
+
+  const fetchPaintList = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const res = await instance.get("/paint");
+      setList(res.data?.data || []);
+      setIsSearchResult(false);
+    } catch (error) {
+      console.error("Error fetching painted list:", error);
+      message.error("Failed to load painted list");
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
 
   useEffect(() => {
-    // Load descriptions and locations from constants.js
     setDescriptions(loadDescriptionList());
     setLocations(loadLocationList());
-  }, []);
+    fetchPaintList();
+  }, [fetchPaintList]);
+
+  const paintList = useMemo(() => (Array.isArray(list) ? list : []), [list]);
+
+  const summary = useMemo(() => {
+    const todayItems = paintList.filter((item) =>
+      isSameDay(item.createdAt || item.updatedAt)
+    );
+    const latestItem = [...paintList].sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt || 0) -
+        new Date(a.updatedAt || a.createdAt || 0)
+    )[0];
+
+    const todayQty = todayItems.reduce((total, item) => {
+      const qty = Number(item.qty);
+      return Number.isFinite(qty) ? total + qty : total;
+    }, 0);
+
+    return {
+      recordsShown: paintList.length,
+      todayEntries: todayItems.length,
+      todayQty,
+      latestUpdate: formatShortDateTime(
+        latestItem?.updatedAt || latestItem?.createdAt
+      ),
+    };
+  }, [paintList]);
 
   const handleFinish = async (values) => {
     try {
       const res = await instance.post("/paint", values);
-      if(res.data.code === 0){
+      if (res.data?.code === 0) {
         message.success("Painted part added successfully");
+        setList(res.data?.data || []);
+        setIsSearchResult(false);
+        setSearchWo("");
+        form.resetFields();
+      } else {
+        message.error(res.data?.message || "Failed to add painted part");
       }
-      setList(res.data.data);
     } catch (error) {
       console.error("Error submitting the request:", error);
+      message.error("Failed to add painted part");
     }
   };
 
   const handleDelete = async (recordId) => {
-    console.log("🗑️ Deleting work order with id:", recordId);
     try {
       const res = await instance.post("/paint/delete", { id: recordId });
-      if(res.data && res.data.code === 0){
-        // Refresh the entire list from the server to ensure data consistency
-        const refreshRes = await instance.get("/paint");
-        if(refreshRes.data && refreshRes.data.code === 0) {
-          setList(refreshRes.data.data);
-          message.success("Work order deleted successfully");
-        } else {
-          // Fallback: update local state if refresh fails
-          const newList = list.filter((item) => item._id !== recordId);
-          setList(newList);
-          message.success("Work order deleted successfully");
-        }
+      if (res.data?.code === 0) {
+        await fetchPaintList();
+        message.success("Work order deleted successfully");
       } else {
         message.error(res.data?.message || "Failed to delete work order");
       }
@@ -64,31 +143,13 @@ const Status = () => {
 
   const handleEdit = async (originalWo, updateData) => {
     try {
-      const res = await instance.post("/paint/changeorder", { 
-        originalWo, 
-        updateData 
+      const res = await instance.post("/paint/changeorder", {
+        originalWo,
+        updateData,
       });
-      if(res.data && res.data.code === 0){
-        // Refresh the entire list from the server to ensure data consistency
-        const refreshRes = await instance.get("/paint");
-        if(refreshRes.data && refreshRes.data.code === 0) {
-          setList(refreshRes.data.data);
-          message.success("Painted part updated successfully");
-        } else {
-          // Fallback: update local state if refresh fails - use the record's _id if available, otherwise use WO
-          let updatedList;
-          if (updateData._id) {
-            updatedList = list.map((item) => 
-              item._id === updateData._id ? { ...item, ...updateData } : item
-            );
-          } else {
-            updatedList = list.map((item) => 
-              item.wo === originalWo ? { ...item, ...updateData } : item
-            );
-          }
-          setList(updatedList);
-          message.success("Painted part updated successfully");
-        }
+      if (res.data?.code === 0) {
+        await fetchPaintList();
+        message.success("Painted part updated successfully");
       } else {
         message.error(res.data?.message || "Failed to update painted part");
       }
@@ -97,150 +158,227 @@ const Status = () => {
       message.error("Failed to update painted part");
     }
   };
-  const saveTOExcel = () => {
-    instance.post("/paint/savetoexcel").then((res) => {
-      if (res.data.code === 0) {
-        alert(res.data.message);
+
+  const saveToExcel = async () => {
+    try {
+      const res = await instance.post("/paint/savetoexcel");
+      if (res.data?.code === 0) {
+        message.success(res.data.message || "Excel file saved successfully");
+      } else {
+        message.error(res.data?.message || "Failed to save Excel file");
       }
-    });
+    } catch (error) {
+      console.error("Error saving Excel file:", error);
+      message.error("Failed to save Excel file");
+    }
   };
 
   const handleSearch = async () => {
+    const wo = searchWo.trim();
+    if (!wo) {
+      fetchPaintList();
+      return;
+    }
+
+    setLoadingList(true);
     try {
-      const res = await instance.get(`/paint/search`, { params: { wo: searchWo } });
+      const res = await instance.get("/paint/search", { params: { wo } });
       const data = res.data?.data || [];
       if (data.length > 0) {
         setList(data);
         setIsSearchResult(true);
       } else {
-        // reload full list if empty
-        const all = await instance.get("/paint");
-        setList(all.data?.data || []);
-        setIsSearchResult(false);
+        await fetchPaintList();
         message.info("No results found; showing latest items");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("Search failed:", error);
       message.error("Search failed");
+    } finally {
+      setLoadingList(false);
     }
   };
 
-  useEffect(() => {
-    instance
-      .get("/paint")
-      .then((res) => {
-        setList(res.data.data);
-      })
-      .catch((e) => {
-        console.error(e);
-      });
-  }, []);
+  const clearSearch = () => {
+    setSearchWo("");
+    fetchPaintList();
+  };
+
+  const listStatus = isSearchResult
+    ? `${summary.recordsShown} result${summary.recordsShown === 1 ? "" : "s"} for "${searchWo}"`
+    : `Showing latest ${Math.min(summary.recordsShown, 50)} of ${summary.recordsShown} records`;
 
   return (
-    <div>
-      <div className={styles.headContainer}>
-        <h4>Painted Parts Entry</h4>
-        <Link to="/priority" target="_blank" rel="noopener noreferrer">
-          <Button>To Priority List</Button>
-        </Link>
-        <Link to="/setting" target="_blank" rel="noopener noreferrer">
-          <FontAwesomeIcon icon={faGear} size="2x" />
-        </Link>
-      </div>
-      <Form
-        layout="vertical"
-        onFinish={handleFinish}
-        initialValues={{
-          wo: "",
-          description: "",
-          qty: "",
-          movedTo: "",
-          notes: "",
-        }}
-      >
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              label="WO#"
-              name="wo"
-              rules={[{ required: true, message: "Please enter WO#" }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item label="Description" name="description">
-              <Select placeholder="Select Description">
-                {descriptions.map((description, index) => (
-                  <Option key={index} value={description}>
-                    {description}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item label="Quantity" name="qty">
-              <Input type="number" min={0} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item label="Moved To" name="movedTo">
-              <Select placeholder="Select Location">
-                {locations.map((location, index) => (
-                  <Option key={index} value={location}>
-                    {location}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-        <Form.Item label="Notes" name="notes">
-          <Input />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" block>
-            Submit
-          </Button>
-        </Form.Item>
-      </Form>
-
-      <hr />
-
-      <h4>Current Paint</h4>
-      <CurrentPaint />
-      <div className={styles.headContainer}>
-        <h4>Painted List</h4>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Input
-            placeholder="Search WO#"
-            value={searchWo}
-            onChange={(e) => setSearchWo(e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 200 }}
-          />
-          <Button type="primary" onClick={handleSearch}>Search</Button>
-          <Button onClick={() => saveTOExcel()}>Submit</Button>
+    <div className={styles.paintPage}>
+      <header className={styles.pageHeader}>
+        <div>
+          <Text className={styles.eyebrow}>Painting</Text>
+          <Title level={2} className={styles.pageTitle}>
+            Painted Parts
+          </Title>
         </div>
-      </div>
-      <p>
-        You will find the excel record at:{" "}
-        <strong>"O:\1. PERSONAL FOLDERS\Wesley\PaintRecord"</strong>
-      </p>
-      <div style={{ marginBottom: isSearchResult ? "10%" : 0 }}>
-        <PaintedTable 
-          list={list} 
-          handleDelete={handleDelete} 
-          handleEdit={handleEdit}
-          descriptions={descriptions}
-          locations={locations}
-        />
-      </div>
+        <Space className={styles.headerActions} wrap>
+          <Link to="/priority" target="_blank" rel="noopener noreferrer">
+            <Button icon={<OrderedListOutlined />}>Priority List</Button>
+          </Link>
+          <Link to="/setting" target="_blank" rel="noopener noreferrer">
+            <Button icon={<SettingOutlined />}>Settings</Button>
+          </Link>
+        </Space>
+      </header>
+
+      <section className={styles.quickStats}>
+        <Card className={styles.statCard}>
+          <Statistic title="Records shown" value={summary.recordsShown} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Statistic title="Today entries" value={summary.todayEntries} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Statistic title="Qty today" value={summary.todayQty} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Statistic title="Last update" value={summary.latestUpdate} />
+        </Card>
+      </section>
+
+      <section className={styles.workflowGrid}>
+        <Card
+          className={styles.entryCard}
+          title={
+            <span className={styles.cardTitle}>
+              <PlusOutlined />
+              Painted Part Entry
+            </span>
+          }
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleFinish}
+            className={styles.paintForm}
+            initialValues={{
+              wo: "",
+              description: "",
+              qty: "",
+              movedTo: "",
+              notes: "",
+            }}
+          >
+            <Row gutter={[12, 0]}>
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="WO#"
+                  name="wo"
+                  rules={[{ required: true, message: "Please enter WO#" }]}
+                >
+                  <Input placeholder="Work order" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item label="Description" name="description">
+                  <Select placeholder="Description" showSearch>
+                    {descriptions.map((description) => (
+                      <Option key={description} value={description}>
+                        {description}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item label="Moved To" name="movedTo">
+                  <Select placeholder="Location" showSearch>
+                    {locations.map((location) => (
+                      <Option key={location} value={location}>
+                        {location}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={[12, 0]} align="bottom">
+              <Col xs={24} md={6}>
+                <Form.Item label="Quantity" name="qty">
+                  <Input type="number" min={0} placeholder="Qty" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item label="Notes" name="notes">
+                  <Input placeholder="Notes" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6} className={styles.submitCol}>
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<PlusOutlined />}
+                    block
+                  >
+                    Add
+                  </Button>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        <CurrentPaint />
+      </section>
+
+      <section className={styles.tableSection}>
+        <div className={styles.tableToolbar}>
+          <div>
+            <Title level={4} className={styles.sectionTitle}>
+              Painted List
+            </Title>
+            <Text className={styles.listStatus}>{listStatus}</Text>
+          </div>
+
+          <Space className={styles.tableActions} wrap>
+            <Input
+              placeholder="Search WO#"
+              value={searchWo}
+              onChange={(event) => setSearchWo(event.target.value)}
+              onPressEnter={handleSearch}
+              allowClear
+              className={styles.searchInput}
+            />
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loadingList}
+            >
+              Search
+            </Button>
+            {isSearchResult && <Button onClick={clearSearch}>Clear</Button>}
+            <Button icon={<FileExcelOutlined />} onClick={saveToExcel}>
+              Save Excel
+            </Button>
+          </Space>
+        </div>
+
+        <Text className={styles.exportHint}>
+          Excel record path:{" "}
+          <strong>O:\1. PERSONAL FOLDERS\Wesley\PaintRecord</strong>
+        </Text>
+
+        <div className={styles.tableWrap}>
+          <PaintedTable
+            list={paintList}
+            handleDelete={handleDelete}
+            handleEdit={handleEdit}
+            descriptions={descriptions}
+            locations={locations}
+          />
+        </div>
+      </section>
     </div>
   );
 };
 
-export default Status;
+export default Paint;

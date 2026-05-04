@@ -1,167 +1,193 @@
-.status-container {
-  padding: 24px;
-  background: #f5f5f5;
-  min-height: 100vh;
+.line-dashboard {
+  color: #0f172a;
+  padding: 20px 0 40px;
+  text-align: left;
 }
 
-.status-header {
+.line-dashboard-header {
+  align-items: flex-start;
   display: flex;
+  gap: 16px;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
-.status-header h2 {
-  margin: 0;
-  color: #1f1f1f;
+.dashboard-kicker {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
-.status-content {
+.dashboard-title {
+  color: #0f172a !important;
+  margin: 2px 0 0 !important;
+}
+
+.dashboard-refresh {
+  color: #64748b;
+  font-size: 12px;
+  padding-top: 6px;
+}
+
+.shift-entry-grid {
+  align-items: stretch;
   display: grid;
-  gap: 24px;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  margin-bottom: 16px;
 }
 
-.status-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03),
-              0 2px 4px rgba(0, 0, 0, 0.03),
-              0 4px 8px rgba(0, 0, 0, 0.03);
-  transition: all 0.3s ease;
-}
-
-.status-card:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05),
-              0 4px 8px rgba(0, 0, 0, 0.05),
-              0 8px 16px rgba(0, 0, 0, 0.05);
-}
-
-/* Table styles */
-.ant-table-wrapper {
-  background: #fff;
+.dashboard-card,
+.efficiency-card,
+.metric-card {
+  border: 1px solid #dbe3ed;
   border-radius: 8px;
 }
 
-.ant-table-thead > tr > th {
-  background: #fafafa !important;
-  font-weight: 600;
-  padding: 16px !important;
-  border-bottom: 2px solid #f0f0f0;
+.dashboard-card .ant-card-head {
+  min-height: 44px;
 }
 
-.ant-table-tbody > tr > td {
-  padding: 16px !important;
+.dashboard-card .ant-card-head-title {
+  color: #0f172a;
+  font-weight: 700;
+  padding: 11px 0;
 }
 
-.ant-table-tbody > tr:hover > td {
-  background: #f0f7ff !important;
+.dashboard-card .ant-card-body,
+.efficiency-card .ant-card-body {
+  padding: 16px;
 }
 
-/* Status indicators */
-.status-badge {
-  display: inline-flex;
+.card-title {
   align-items: center;
-  padding: 4px 12px;
-  border-radius: 12px;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.shift-form-card .ant-form-item,
+.error-form-card .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.shift-form-card .ant-form-item-label,
+.error-form-card .ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+.shift-help {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  margin: -2px 0 12px;
+}
+
+.efficiency-heading {
+  align-items: center;
+  color: #334155;
+  display: flex;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.status-badge.completed {
-  background: #f6ffed;
-  color: #52c41a;
-  border: 1px solid #b7eb8f;
+.efficiency-heading .anticon {
+  color: #2563eb;
 }
 
-.status-badge.in-progress {
-  background: #e6f7ff;
-  color: #1890ff;
-  border: 1px solid #91d5ff;
+.efficiency-detail {
+  color: #475569;
+  display: flex;
+  font-size: 12px;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 10px;
 }
 
-.status-badge.pending {
-  background: #fff7e6;
-  color: #fa8c16;
-  border: 1px solid #ffd591;
+.metric-grid.compact {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 16px;
 }
 
-/* Custom scrollbar */
-.ant-table-body {
-  scrollbar-width: thin;
-  scrollbar-color: #d9d9d9 #f5f5f5;
+.metric-card .ant-card-body {
+  padding: 14px 16px;
 }
 
-.ant-table-body::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.metric-card .ant-statistic-title {
+  color: #475569;
+  font-size: 12px;
+  margin-bottom: 6px;
 }
 
-.ant-table-body::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 3px;
+.metric-card .ant-statistic-content {
+  color: #111827;
+  font-size: 23px;
+  line-height: 1.2;
 }
 
-.ant-table-body::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
-  border-radius: 3px;
+.metric-card .ant-statistic-content-prefix {
+  color: #2563eb;
+  margin-right: 8px;
 }
 
-.ant-table-body::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
+.shift-history-card {
+  margin-bottom: 16px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .status-container {
-    padding: 16px;
+.shift-history-card .ant-table-thead > tr > th,
+.error-table-card .ant-table-thead > tr > th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  padding: 10px 12px;
+}
+
+.shift-history-card .ant-table-tbody > tr > td,
+.error-table-card .ant-table-tbody > tr > td {
+  padding: 9px 12px;
+  vertical-align: middle;
+}
+
+.error-log-grid {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(360px, 0.78fr) minmax(0, 1.22fr);
+}
+
+.error-table-card .ant-btn-link {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 1120px) {
+  .metric-grid.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  
-  .status-header {
+
+  .shift-entry-grid,
+  .error-log-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .line-dashboard-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+  }
+
+  .metric-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .efficiency-detail {
+    flex-direction: column;
+    gap: 4px;
   }
 }
-
-/* Animation */
-.status-card {
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Empty state */
-.ant-table-empty {
-  padding: 48px;
-  text-align: center;
-  color: #999;
-}
-
-/* Button styles */
-.action-button {
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.action-button:hover {
-  transform: translateY(-1px);
-}
-
-/* Row highlight on hover */
-.ant-table-tbody > tr {
-  transition: all 0.3s ease;
-}
-
-.ant-table-tbody > tr:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-} 

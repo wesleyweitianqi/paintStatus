@@ -1,155 +1,167 @@
-.powder-container {
-  padding: 24px;
-  background: #f5f5f5;
-  min-height: 100vh;
+.powder-page {
+  color: #0f172a;
+  padding: 20px 0 40px;
+  text-align: left;
 }
 
-.powder-header {
+.powder-page-header {
+  align-items: flex-start;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.powder-header h2 {
-  margin: 0;
-}
-
-.refresh-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.add-powder-card,
-.powder-table-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03),
-              0 2px 4px rgba(0, 0, 0, 0.03),
-              0 4px 8px rgba(0, 0, 0, 0.03);
-  margin-bottom: 24px;
-}
-
-.powder-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
 }
 
-.form-item {
-  display: flex;
-  flex-direction: column;
+.powder-kicker {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.powder-title {
+  color: #0f172a !important;
+  margin: 2px 0 0 !important;
+}
+
+.powder-header-actions {
+  justify-content: flex-end;
+}
+
+.powder-stat-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.powder-stat-card,
+.powder-card {
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+}
+
+.powder-stat-card .ant-card-body {
+  padding: 14px 16px;
+}
+
+.powder-stat-card .ant-statistic-title {
+  color: #475569;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.powder-stat-card .ant-statistic-content {
+  color: #111827;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.powder-card {
+  margin-bottom: 16px;
+}
+
+.powder-card .ant-card-head {
+  min-height: 44px;
+}
+
+.powder-card .ant-card-head-title {
+  color: #0f172a;
+  font-weight: 700;
+  padding: 11px 0;
+}
+
+.powder-card .ant-card-body {
+  padding: 16px;
+}
+
+.powder-card-title {
+  align-items: center;
+  display: inline-flex;
   gap: 8px;
 }
 
-.form-item label {
-  font-weight: 500;
-  color: #1f1f1f;
+.powder-form .ant-form-item {
+  margin-bottom: 12px;
 }
 
-.qty-input {
-  width: 100px;
+.powder-form .ant-form-item-label {
+  padding-bottom: 4px;
 }
 
-.action-buttons {
+.full-input {
+  width: 100%;
+}
+
+.powder-toolbar {
+  align-items: center;
   display: flex;
-  gap: 8px;
-  justify-content: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-/* Table styles */
-.ant-table-thead > tr > th {
-  background: #fafafa !important;
+.powder-search {
+  width: 300px;
+}
+
+.powder-supplier-filter {
+  width: 180px;
+}
+
+.powder-list-status {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.powder-qty-edit {
+  width: 96px;
+}
+
+.qty-tag {
+  min-width: 52px;
+  text-align: center;
+}
+
+.powder-table-card .ant-table-thead > tr > th {
+  background: #f8fafc;
+  color: #334155;
   font-weight: 600;
+  padding: 10px 12px;
 }
 
-.ant-table-tbody > tr:hover > td {
-  background: #f0f7ff !important;
+.powder-table-card .ant-table-tbody > tr > td {
+  padding: 9px 12px;
+  vertical-align: middle;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .powder-container {
-    padding: 16px;
+.powder-table-card .ant-table-tbody > tr:hover > td {
+  background: #f8fafc;
+}
+
+@media (max-width: 1100px) {
+  .powder-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .powder-page-header,
+  .powder-toolbar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .form-row {
+  .powder-header-actions,
+  .powder-toolbar .ant-space,
+  .powder-search,
+  .powder-supplier-filter {
+    width: 100%;
+  }
+
+  .powder-stat-grid {
     grid-template-columns: 1fr;
   }
-
-  .powder-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 }
-
-/* Animations */
-.add-powder-card,
-.powder-table-card {
-  transition: all 0.3s ease;
-}
-
-.add-powder-card:hover,
-.powder-table-card:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05),
-              0 4px 8px rgba(0, 0, 0, 0.05),
-              0 8px 16px rgba(0, 0, 0, 0.05);
-}
-
-/* Loading state */
-.ant-spin-spinning {
-  opacity: 0.8;
-}
-
-/* Form input focus states */
-.ant-input:focus,
-.ant-select-focused .ant-select-selector {
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
-
-/* Button hover effects */
-.action-buttons .ant-btn {
-  transition: all 0.3s ease;
-}
-
-.action-buttons .ant-btn:hover {
-  transform: translateY(-1px);
-}
-
-/* Add these to your existing CSS */
-.powder-table-card {
-  max-height: calc(100vh - 300px); /* Adjust based on your header and form height */
-}
-
-.powder-table-card .ant-table-body {
-  scrollbar-width: thin;
-  scrollbar-color: #d9d9d9 #f5f5f5;
-}
-
-/* Custom scrollbar for webkit browsers */
-.powder-table-card .ant-table-body::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.powder-table-card .ant-table-body::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 3px;
-}
-
-.powder-table-card .ant-table-body::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
-  border-radius: 3px;
-}
-
-.powder-table-card .ant-table-body::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
-} 

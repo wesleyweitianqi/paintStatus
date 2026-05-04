@@ -1,293 +1,277 @@
-import React, { useEffect, useState } from "react";
-import "../styles/global.scss";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  Card,
+  Col,
+  Input,
+  Modal,
+  Popconfirm,
+  Row,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+} from "antd";
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  DownloadOutlined,
+  FileTextOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  StopOutlined,
+  UnorderedListOutlined,
+} from "@ant-design/icons";
 import instance from "../utils/http";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { Button, List, Card, Row, Col, Input, Modal } from "antd";
 import styles from "../styles/coreclamp.module.scss";
-import _ from "lodash";
+
+const { Text, Title } = Typography;
+const { TextArea } = Input;
+
+const FILE_HOST = "https://192.168.1.169:8080";
+
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
+const formatDateTime = (date) => {
+  if (!date) {
+    return "-";
+  }
+
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "-";
+  }
+
+  return parsedDate.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const sumQty = (items) =>
+  items.reduce((total, item) => {
+    const qty = Number(item.qty);
+    return Number.isFinite(qty) ? total + qty : total;
+  }, 0);
 
 function CoreClamp() {
-  const [search, setSearch] = useState("");
-  const [searchResult, setSearchResult] = useState([]);
+  const [searchText, setSearchText] = useState("");
   const [todayComplete, setTodayComplete] = useState([]);
   const [formData, setFormData] = useState({});
-  const navigate = useNavigate();
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [ccList, setCCList] = useState([]);
-  console.log(ccList);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [startTime, setStartTime] = useState(null);
   const [timeRecords, setTimeRecords] = useState([]);
   const [completedList, setCompletedList] = useState([]);
-  const host = "https://192.168.1.169:8080";
   const [currentTimer, setCurrentTimer] = useState(null);
   const [timerNotes, setTimerNotes] = useState("");
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [operatorName, setOperatorName] = useState("");
+  const [isStopModalVisible, setIsStopModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [timerLoading, setTimerLoading] = useState(false);
 
-  const fetchCCList = () => {
-    instance
-      .get("/coreclamp/list")
-      .then((res) => {
-        setCCList(res.data.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching ccList:", error);
-        toast.error("Failed to fetch updated list.");
-      });
-  };
+  const fetchTimerData = useCallback(async () => {
+    try {
+      const response = await instance.get("/coreclamp/timer/status");
+      if (response.data?.code === 0 && response.data.data) {
+        const { currentTimer, todayTimers } = response.data.data;
+        setCurrentTimer(currentTimer || null);
+        setTimeRecords(toArray(todayTimers));
+      }
+    } catch (error) {
+      console.error("Error fetching timer data:", error);
+    }
+  }, []);
 
-  useEffect(() => {
-    fetchCCList();
-    instance.get("/coreclamp/completed").then((res) => {
-      setCompletedList(res.data.data);
-    });
-    instance.get("/coreclamp/todaycomplete").then((res) => {
-      const data = res.data.data;
-      setTodayComplete(data);
-    });
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [listResult, completedResult, todayResult, timerResult] =
+        await Promise.allSettled([
+          instance.get("/coreclamp/list"),
+          instance.get("/coreclamp/completed"),
+          instance.get("/coreclamp/todaycomplete"),
+          instance.get("/coreclamp/timer/status"),
+        ]);
+
+      if (listResult.status === "fulfilled") {
+        setCCList(toArray(listResult.value.data?.data));
+      }
+
+      if (completedResult.status === "fulfilled") {
+        setCompletedList(toArray(completedResult.value.data?.data));
+      }
+
+      if (todayResult.status === "fulfilled") {
+        setTodayComplete(toArray(todayResult.value.data?.data));
+      }
+
+      if (
+        timerResult.status === "fulfilled" &&
+        timerResult.value.data?.code === 0
+      ) {
+        const timerData = timerResult.value.data.data || {};
+        setCurrentTimer(timerData.currentTimer || null);
+        setTimeRecords(toArray(timerData.todayTimers));
+      }
+    } catch (error) {
+      console.error("Error loading core clamp dashboard:", error);
+      message.error("Failed to load core clamp data");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    const initialFormData = todayComplete.reduce((acc, item) => {
-      if (!acc[item.wo]) {
-        acc[item.wo] = {
-          comment: "",
-          completedAt: "",
-        };
-      }
-      return acc;
-    }, {});
+    fetchDashboard();
+  }, [fetchDashboard]);
 
-    setFormData(initialFormData);
-  }, [todayComplete]);
-
-  // Combined timer polling and history fetch
   useEffect(() => {
-    const fetchTimerData = async () => {
-      try {
-        const response = await instance.get("/coreclamp/timer/status");
-        if (response.data.code === 0 && response.data.data) {
-          const { currentTimer, todayTimers } = response.data.data;
-          setIsTimerRunning(currentTimer?.isRunning || false);
-          setTimeRecords(todayTimers || []);
-        }
-      } catch (error) {
-        console.error("Error fetching timer data:", error);
-      }
-    };
-
-    // Initial fetch
-    fetchTimerData();
-
-    // Poll every 5 seconds
     const intervalId = setInterval(fetchTimerData, 5000);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchTimerData]);
 
-  const handleTimerClick = async () => {
-    if (isTimerRunning) {
-      // Stop the timer
-      const endTime = new Date();
-      try {
-        const response = await instance.post("/coreclamp/timer/stop", { endTime });
-        if (response.data.code === 0) {
-          const { todayTimers } = response.data.data;
-          setIsTimerRunning(false);
-          setTimeRecords(todayTimers);
-        }
-      } catch (error) {
-        console.error("Error updating time records:", error);
-        toast.error("Failed to stop timer");
-      }
-    } else {
-      // Start the timer
-      const newStartTime = new Date();
-      try {
-        const response = await instance.post("/coreclamp/timer/start", { 
-          startTime: newStartTime,
-          operator: operatorName 
-        });
-        if (response.data.code === 0) {
-          const { todayTimers } = response.data.data;
-          setIsTimerRunning(true);
-          setTimeRecords(todayTimers);
-          setOperatorName("");
-        }
-      } catch (error) {
-        console.error("Error recording start time:", error);
-        toast.error("Failed to start timer");
-      }
-    }
-  };
-
-  const handleModalOk = async () => {
-    if (isTimerRunning) {
-      // Stop the timer
-      try {
-        const response = await instance.post("/coreclamp/timer/stop", { 
-          notes: timerNotes,
-          endTime: new Date()
-        });
-        if (response.data.code === 0) {
-          const { todayTimers } = response.data.data;
-          setTimeRecords(todayTimers);
-          setTimerNotes("");
-          setIsModalVisible(false);
-        }
-      } catch (error) {
-        console.error("Error stopping timer:", error);
-        toast.error("Failed to stop timer");
-      }
-    } else {
-      // Start the timer
-      try {
-        const response = await instance.post("/coreclamp/timer/start", { 
-          operator: operatorName,
-          startTime: new Date()
-        });
-        if (response.data.code === 0) {
-          const { todayTimers } = response.data.data;
-          setTimeRecords(todayTimers);
-          setOperatorName("");
-          setIsModalVisible(false);
-        }
-      } catch (error) {
-        console.error("Error starting timer:", error);
-        toast.error("Failed to start timer");
-      }
-    }
-  };
-
-  const handleModalCancel = () => {
-    setIsModalVisible(false);
-    setTimerNotes("");
-    setOperatorName("");
-  };
-
-  const dataSource = isSearchFocused ? searchResult : ccList;
-
-  const dataSourceEle = dataSource?.map((item, index) => {
-    const fileDom = _.isEmpty(item.files)
-      ? null
-      : item.files.map((one, index) => {
-          return (
-            <div key={index}>
-              <Link
-                to={`${host}/coreclamps/${encodeURIComponent(one)}`}
-                target="_blank"
-                rel="noreferrer"
-                download
-              >
-                {one}
-              </Link>
-            </div>
-          );
-        });
-    return (
-      <tr key={index}>
-        <th scope="row">{index}</th>
-        <td>{item.wo}</td>
-        <td>{item.qty}</td>
-        <td>
-          {item.createdAt
-            ? new Date(item.createdAt).toString().substring(0, 15)
-            : new Date().toString().substring(0, 15)}
-        </td>
-        <td>{item.isComplete ? "Completed" : "producing"}</td>
-        <td>{fileDom}</td>
-        <td>
-          <Button onClick={() => finishHandler(item.wo)}>Finish</Button>
-        </td>
-      </tr>
+  useEffect(() => {
+    setFormData((previous) =>
+      todayComplete.reduce((nextFormData, item) => {
+        nextFormData[item.wo] = previous[item.wo] || {
+          comment: "",
+        };
+        return nextFormData;
+      }, {})
     );
-  });
+  }, [todayComplete]);
 
-  const cancelHandler = async (wo) => {
-    instance.post("/coreclamp/cancel", { wo: wo }).then((res) => {
-      console.log(res.data.data);
-      if (res.data.data) {
-        const newList = todayComplete.filter((i) => i.wo !== wo);
-        setTodayComplete(newList);
-        fetchCCList();
-        setFormData((prevFormData) => {
-          const updatedFormData = { ...prevFormData };
-          delete updatedFormData[wo];
-          return updatedFormData;
-        });
-      } else {
-        toast.error("Failed to cancel");
-      }
-    });
-  };
+  const filteredWorkOrders = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
 
-  const formatDateTime = (date) => {
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
+    if (!search) {
+      return ccList;
+    }
 
-  const formatDateTimeForInput = (date) => {
-    return new Date(date).toISOString().slice(0, 19);
-  };
+    return ccList.filter((item) =>
+      [item.wo, item.qty, item.approvedBy]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  }, [ccList, searchText]);
 
-  const todayCompleteEle = (
-    <table className="table">
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">CoreClamp WO#</th>
-          <th scope="col">Quantity</th>
-          <th scope="col">Completed Time</th>
-          <th scope="col">Comment</th>
-          <th scope="col">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {todayComplete.map((item, index) => (
-          <tr key={item.wo}>
-            <th scope="row">{index + 1}</th>
-            <td>{item.wo}</td>
-            <td>{item.qty}</td>
-            <td>{formatDateTime(item.updatedAt)}</td>
-            <td>
-              <input
-                type="text"
-                value={formData[item.wo]?.comment || ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    [item.wo]: {
-                      ...prev[item.wo],
-                      comment: e.target.value,
-                    },
-                  }))
-                }
-              />
-            </td>
-            <td>
-              <Button variant="warning" onClick={() => cancelHandler(item.wo)}>
-                Cancel
-              </Button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  const summary = useMemo(
+    () => ({
+      openJobs: ccList.length,
+      openQty: sumQty(ccList),
+      completedToday: todayComplete.length,
+      completedQtyToday: sumQty(todayComplete),
+      completedThisYear: completedList.length,
+    }),
+    [ccList, completedList, todayComplete]
   );
+
+  const isTimerRunning = Boolean(currentTimer?.isRunning);
+
+  const handleStartTimer = async () => {
+    setTimerLoading(true);
+    try {
+      const response = await instance.post("/coreclamp/timer/start", {
+        startTime: new Date(),
+      });
+      if (response.data?.code === 0) {
+        const { currentTimer, todayTimers } = response.data.data || {};
+        setCurrentTimer(currentTimer || null);
+        setTimeRecords(toArray(todayTimers));
+        message.success("Timer started");
+      } else {
+        message.error(response.data?.message || "Failed to start timer");
+      }
+    } catch (error) {
+      console.error("Error starting timer:", error);
+      message.error("Failed to start timer");
+    } finally {
+      setTimerLoading(false);
+    }
+  };
+
+  const handleStopTimer = async () => {
+    setTimerLoading(true);
+    try {
+      const response = await instance.post("/coreclamp/timer/stop", {
+        notes: timerNotes,
+        endTime: new Date(),
+      });
+      if (response.data?.code === 0) {
+        const { todayTimers } = response.data.data || {};
+        setCurrentTimer(null);
+        setTimeRecords(toArray(todayTimers));
+        setTimerNotes("");
+        setIsStopModalVisible(false);
+        message.success("Timer stopped");
+      } else {
+        message.error(response.data?.message || "Failed to stop timer");
+      }
+    } catch (error) {
+      console.error("Error stopping timer:", error);
+      message.error("Failed to stop timer");
+    } finally {
+      setTimerLoading(false);
+    }
+  };
+
+  const handleFinish = async (wo) => {
+    try {
+      const response = await instance.post("/coreclamp/finish", { wo });
+
+      if (response.data?.code === 0) {
+        const savedData = response.data.data;
+        setCCList((previous) => previous.filter((item) => item.wo !== wo));
+        setTodayComplete((previous) => {
+          if (previous.some((item) => item.wo === savedData.wo)) {
+            return previous;
+          }
+          return [savedData, ...previous];
+        });
+        message.success(`${wo} completed`);
+      } else {
+        message.error(response.data?.message || "Failed to complete item");
+      }
+    } catch (error) {
+      console.error("Error completing item:", error);
+      message.error("Failed to complete item");
+    }
+  };
+
+  const handleCancel = async (wo) => {
+    try {
+      const response = await instance.post("/coreclamp/cancel", { wo });
+      if (response.data?.code === 0 && response.data.data) {
+        setTodayComplete((previous) =>
+          previous.filter((item) => item.wo !== wo)
+        );
+        setFormData((previous) => {
+          const nextFormData = { ...previous };
+          delete nextFormData[wo];
+          return nextFormData;
+        });
+        fetchDashboard();
+        message.success(`${wo} moved back to open list`);
+      } else {
+        message.error(response.data?.message || "Failed to cancel");
+      }
+    } catch (error) {
+      console.error("Error canceling item:", error);
+      message.error("Failed to cancel");
+    }
+  };
 
   const handleSubmit = async () => {
     const submissionData = todayComplete.map((item) => ({
       wo: item.wo,
       qty: item.qty,
-      completedAt: item.completedAt || formData[item.wo]?.completedAt,
+      updatedAt: item.updatedAt,
       comment: formData[item.wo]?.comment || "",
     }));
 
@@ -296,160 +280,391 @@ function CoreClamp() {
         "/coreclamp/savetoexcel",
         submissionData
       );
-      if (response.data.code === 0) {
-        toast.success("Data saved to Excel successfully!");
+      if (response.data?.code === 0) {
+        message.success("Data saved to Excel successfully");
       } else {
-        toast.error("Failed to save data to Excel");
+        message.error(response.data?.message || "Failed to save data to Excel");
       }
     } catch (error) {
       console.error("Error saving to Excel:", error);
-      toast.error("Failed to save data to Excel");
+      message.error("Failed to save data to Excel");
     }
   };
 
-  const completedDataSource = completedList?.map((item, index) => {
-    const list = "";
-    return list + item.wo + "  ";
-  });
+  const workOrderColumns = [
+    {
+      title: "WO#",
+      dataIndex: "wo",
+      key: "wo",
+      width: 150,
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      title: "Qty",
+      dataIndex: "qty",
+      key: "qty",
+      width: 90,
+    },
+    {
+      title: "Created",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      width: 160,
+      render: (value) => formatDateTime(value),
+    },
+    {
+      title: "Status",
+      key: "status",
+      width: 120,
+      render: (_, record) => (
+        <Tag color={record.isComplete ? "success" : "processing"}>
+          {record.isComplete ? "Completed" : "Open"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Files",
+      dataIndex: "files",
+      key: "files",
+      render: (files) =>
+        files?.length ? (
+          <Space wrap size={4}>
+            {files.map((file) => (
+              <a
+                key={file}
+                href={`${FILE_HOST}/coreclamps/${encodeURIComponent(file)}`}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.fileLink}
+              >
+                <FileTextOutlined />
+                {file}
+              </a>
+            ))}
+          </Space>
+        ) : (
+          <Text type="secondary">No files</Text>
+        ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      width: 120,
+      render: (_, record) => (
+        <Popconfirm
+          title="Finish work order"
+          description={`Mark ${record.wo} as completed?`}
+          okText="Finish"
+          onConfirm={() => handleFinish(record.wo)}
+        >
+          <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
+            Finish
+          </Button>
+        </Popconfirm>
+      ),
+    },
+  ];
 
-  const finishHandler = async (wo) => {
-    try {
-      const response = await instance.post("/coreclamp/finish", { wo: wo });
+  const completedTodayColumns = [
+    {
+      title: "WO#",
+      dataIndex: "wo",
+      key: "wo",
+      width: 150,
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      title: "Qty",
+      dataIndex: "qty",
+      key: "qty",
+      width: 90,
+    },
+    {
+      title: "Completed",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      width: 170,
+      render: (value) => formatDateTime(value),
+    },
+    {
+      title: "Comment",
+      key: "comment",
+      render: (_, record) => (
+        <Input
+          placeholder="Optional comment"
+          value={formData[record.wo]?.comment || ""}
+          onChange={(event) =>
+            setFormData((previous) => ({
+              ...previous,
+              [record.wo]: {
+                ...previous[record.wo],
+                comment: event.target.value,
+              },
+            }))
+          }
+        />
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      width: 120,
+      render: (_, record) => (
+        <Popconfirm
+          title="Move back to open list"
+          description={`Cancel completion for ${record.wo}?`}
+          okText="Cancel Complete"
+          onConfirm={() => handleCancel(record.wo)}
+        >
+          <Button size="small" icon={<CloseCircleOutlined />}>
+            Cancel
+          </Button>
+        </Popconfirm>
+      ),
+    },
+  ];
 
-      if (response.data.code === 0) {
-        const savedData = response.data.data;
-        toast.success(`${wo} completed`);
-
-        fetchCCList();
-
-        setTodayComplete((prev) => {
-          const newList = [...prev];
-          newList.unshift(savedData);
-          return newList;
-        });
-      } else {
-        toast.error("Failed to complete item");
-      }
-    } catch (error) {
-      console.error("Error completing item:", error);
-      toast.error("Failed to complete item");
-    }
-  };
-
-  // Update the timer records display
-  const timeRecordsList = (
-    <Card title="Time Records" style={{ marginTop: 20 }}>
-      <List
-        bordered
-        dataSource={timeRecords}
-        renderItem={(record, index) => (
-          <List.Item
-            key={index}
-            style={{
-              padding: "4px 8px",
-              margin: "2px 0",
-            }}
-          >
-            <Row style={{ width: "100%" }}>
-              <Col span={12}>
-                <strong style={{ fontSize: "12px" }}>
-                  Record {timeRecords.length - index} {record.operator ? `- ${record.operator}` : ""}
-                </strong>
-              </Col>
-              <Col span={12}>
-                <div style={{ fontSize: "12px" }}>
-                  Start: {record.startTime ? new Date(record.startTime).toLocaleString() : "N/A"}
-                </div>
-                <div style={{ fontSize: "12px" }}>
-                  End: {record.endTime ? new Date(record.endTime).toLocaleString() : "In Progress"}
-                </div>
-                {record.notes && (
-                  <div style={{ fontSize: "12px", color: "#666" }}>
-                    Notes: {record.notes}
-                  </div>
-                )}
-              </Col>
-            </Row>
-          </List.Item>
-        )}
-        style={{ margin: "0" }}
-      />
-    </Card>
-  );
+  const historyColumns = [
+    {
+      title: "WO#",
+      dataIndex: "wo",
+      key: "wo",
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      title: "Qty",
+      dataIndex: "qty",
+      key: "qty",
+      width: 90,
+    },
+    {
+      title: "Completed",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      width: 170,
+      render: (value) => formatDateTime(value),
+    },
+  ];
 
   return (
-    <div>
-      {/* <Button
-        type="primary"
-        onClick={handleTimerClick}
-        className={isTimerRunning ? styles.stopButton : ""}
+    <div className={styles.corePage}>
+      <header className={styles.pageHeader}>
+        <div>
+          <Text className={styles.kicker}>Core Clamp</Text>
+          <Title level={2} className={styles.pageTitle}>
+            Work Orders
+          </Title>
+        </div>
+        <Space className={styles.headerActions} wrap>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchDashboard}
+            loading={loading}
+          >
+            Refresh
+          </Button>
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleSubmit}
+            disabled={!todayComplete.length}
+          >
+            Save Today Excel
+          </Button>
+        </Space>
+      </header>
+
+      <section className={styles.statGrid}>
+        <Card className={styles.statCard}>
+          <Statistic title="Open Jobs" value={summary.openJobs} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Statistic title="Open Qty" value={summary.openQty} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Statistic title="Finished Today" value={summary.completedToday} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Statistic title="Qty Today" value={summary.completedQtyToday} />
+        </Card>
+      </section>
+
+      <section className={styles.controlGrid}>
+        <Card
+          className={`${styles.timerCard} ${
+            isTimerRunning ? styles.timerRunning : styles.timerStopped
+          }`}
+        >
+          <div className={styles.timerHeader}>
+            <div>
+              <span className={styles.panelLabel}>Line timer</span>
+              <div className={styles.timerStatus}>
+                {isTimerRunning ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
+                <span>{isTimerRunning ? "Running" : "Stopped"}</span>
+              </div>
+            </div>
+            <Tag color={isTimerRunning ? "success" : "default"}>
+              {timeRecords.length} sessions today
+            </Tag>
+          </div>
+          <div className={styles.timerMeta}>
+            <span>
+              Current start:{" "}
+              {currentTimer?.startTime
+                ? formatDateTime(currentTimer.startTime)
+                : "-"}
+            </span>
+            <span>
+              Last record:{" "}
+              {timeRecords[0]?.startTime ? formatDateTime(timeRecords[0].startTime) : "-"}
+            </span>
+          </div>
+          {isTimerRunning ? (
+            <Button
+              danger
+              icon={<StopOutlined />}
+              loading={timerLoading}
+              onClick={() => setIsStopModalVisible(true)}
+            >
+              Stop Timer
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              loading={timerLoading}
+              onClick={handleStartTimer}
+            >
+              Start Timer
+            </Button>
+          )}
+        </Card>
+
+        <Card className={styles.statusCard}>
+          <Row gutter={[12, 12]}>
+            <Col xs={24} md={8}>
+              <Statistic
+                title="Completed This Year"
+                value={summary.completedThisYear}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Col>
+            <Col xs={24} md={8}>
+              <Statistic
+                title="Timer Sessions"
+                value={timeRecords.length}
+                prefix={<ClockCircleOutlined />}
+              />
+            </Col>
+            <Col xs={24} md={8}>
+              <Statistic
+                title="Showing Open"
+                value={filteredWorkOrders.length}
+                prefix={<UnorderedListOutlined />}
+              />
+            </Col>
+          </Row>
+        </Card>
+      </section>
+
+      <Card
+        className={styles.dashboardCard}
+        title={
+          <span className={styles.cardTitle}>
+            <UnorderedListOutlined />
+            To Do List
+          </span>
+        }
       >
-        {isTimerRunning ? "Stop Timer" : "Start Timer"}
-      </Button>
-      {timeRecordsList}
+        <div className={styles.tableToolbar}>
+          <Input
+            placeholder="Search WO, qty, approved by"
+            prefix={<SearchOutlined />}
+            allowClear
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            className={styles.searchInput}
+          />
+          <Text className={styles.listStatus}>
+            Showing {filteredWorkOrders.length} of {ccList.length}
+          </Text>
+        </div>
+        <Table
+          columns={workOrderColumns}
+          dataSource={filteredWorkOrders}
+          rowKey={(record) => record._id || record.wo}
+          loading={loading}
+          pagination={false}
+          scroll={{ x: 900 }}
+          size="middle"
+        />
+      </Card>
+
+      <Card
+        className={styles.dashboardCard}
+        title="Finished Today"
+        extra={
+          <Space>
+            <Tag>{todayComplete.length} orders</Tag>
+            <Tooltip title="Save today's completed core clamps to Excel">
+              <Button
+                size="small"
+                type="primary"
+                icon={<DownloadOutlined />}
+                onClick={handleSubmit}
+                disabled={!todayComplete.length}
+              >
+                Save Excel
+              </Button>
+            </Tooltip>
+          </Space>
+        }
+      >
+        <Table
+          columns={completedTodayColumns}
+          dataSource={todayComplete}
+          rowKey={(record) => record._id || record.wo}
+          loading={loading}
+          pagination={false}
+          scroll={{ x: 860 }}
+          size="middle"
+        />
+      </Card>
+
+      <Card
+        className={styles.dashboardCard}
+        title="History"
+        extra={<Tag>{completedList.length} this year</Tag>}
+      >
+        <Table
+          columns={historyColumns}
+          dataSource={completedList}
+          rowKey={(record) => record._id || record.wo}
+          loading={loading}
+          pagination={{ pageSize: 8 }}
+          scroll={{ x: 520 }}
+          size="middle"
+        />
+      </Card>
 
       <Modal
-        title={isTimerRunning ? "Stop Timer" : "Start Timer"}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
+        title="Stop Core Clamp Timer"
+        open={isStopModalVisible}
+        onOk={handleStopTimer}
+        onCancel={() => {
+          setIsStopModalVisible(false);
+          setTimerNotes("");
+        }}
+        okText="Stop Timer"
+        okButtonProps={{ danger: true, loading: timerLoading }}
       >
-        {isTimerRunning ? (
-          <Input.TextArea
-            placeholder="Enter notes about this timer session"
-            value={timerNotes}
-            onChange={(e) => setTimerNotes(e.target.value)}
-            rows={4}
-          />
-        ) : (
-          <Input
-            placeholder="Enter your name"
-            value={operatorName}
-            onChange={(e) => setOperatorName(e.target.value)}
-          />
-        )}
-      </Modal> */}
-
-      <h4>To Do List</h4>
-      <hr />
-      <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">#</th>
-            <th scope="col">CoreClamp WO#</th>
-            <th scope="col">Quantity</th>
-            <th scope="col">Create_time</th>
-            <th scope="col">Status</th>
-            <th scope="col">Files</th>
-            <th scope="col">Action</th>
-          </tr>
-        </thead>
-        <tbody>{dataSourceEle}</tbody>
-      </table>
-      <div className={styles.finishToday}>
-        <h4>Finished Today</h4>
-        <Button onClick={handleSubmit}>Submit</Button>
-      </div>
-      <div className={styles.todayCompleteContainer}>{todayCompleteEle}</div>
-      <hr />
-      <h4>History</h4>
-      <hr />
-      <p>All core clamps WOs completed this year:</p>
-      <div className={styles.listContainer}>
-        <p>{completedDataSource}</p>
-      </div>
-      <ToastContainer
-        position="top-center"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+        <TextArea
+          placeholder="Optional notes for this timer session"
+          value={timerNotes}
+          onChange={(event) => setTimerNotes(event.target.value)}
+          rows={4}
+        />
+      </Modal>
     </div>
   );
 }

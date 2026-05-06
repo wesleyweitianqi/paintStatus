@@ -5,16 +5,19 @@ import {
   Col,
   Form,
   Input,
+  Modal,
   Progress,
   Row,
   Select,
   Statistic,
   Table,
   Tag,
+  Tooltip,
   Typography,
   Upload,
   message,
 } from "antd";
+import moment from "moment";
 import {
   BarChartOutlined,
   CalendarOutlined,
@@ -22,8 +25,10 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DashboardOutlined,
+  EditOutlined,
   FieldTimeOutlined,
   FileImageOutlined,
+  LockOutlined,
   SaveOutlined,
   ToolOutlined,
   UploadOutlined,
@@ -35,6 +40,12 @@ const { Text, Title } = Typography;
 const { TextArea } = Input;
 
 const PLANNED_SHIFT_MINUTES = 8 * 60;
+const SHIFT_INPUT_FORMATS = [
+  "YYYY-MM-DD HH:mm:ss",
+  "YYYY-MM-DD HH:mm",
+  "YYYY-MM-DD H:mm:ss",
+  "YYYY-MM-DD H:mm",
+];
 const ERROR_CATEGORIES = [
   "Mechanical",
   "Electrical",
@@ -45,24 +56,31 @@ const ERROR_CATEGORIES = [
   "Maintenance",
   "Other",
 ];
+const ERROR_LOG_FIELDS = [
+  "maintenance",
+  "category",
+  "startTime",
+  "endTime",
+  "rootCause",
+  "solution",
+];
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
-const getTodayValue = () => {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${today.getFullYear()}-${month}-${day}`;
-};
+const getTodayValue = () => moment().format("YYYY-MM-DD");
 
 const parseShiftDateTime = (shiftDate, timeValue) => {
   if (!shiftDate || !timeValue) {
     return null;
   }
 
-  const parsed = new Date(`${shiftDate}T${timeValue}:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  const parsed = moment(
+    `${shiftDate} ${String(timeValue).trim()}`,
+    SHIFT_INPUT_FORMATS,
+    true
+  );
+
+  return parsed.isValid() ? parsed.toDate() : null;
 };
 
 const getShiftWindow = ({ shiftDate, startTime, endTime }) => {
@@ -98,17 +116,52 @@ const formatDateTime = (date) => {
     return "-";
   }
 
-  const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) {
+  const parsedDate = moment(date);
+  if (!parsedDate.isValid()) {
     return "-";
   }
 
-  return parsedDate.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return parsedDate.format("MMM D, h:mm A");
+};
+
+const formatDateTimeInput = (date) => {
+  if (!date) {
+    return "";
+  }
+
+  const parsedDate = moment(date);
+  return parsedDate.isValid() ? parsedDate.format("YYYY-MM-DDTHH:mm") : "";
+};
+
+const formatShiftHistoryTime = (record, boundary) => {
+  const isStart = boundary === "start";
+  const dateField = isStart ? "startDateLocal" : "endDateLocal";
+  const timeField = isStart ? "startTimeLocal" : "endTimeLocal";
+  const timestampField = isStart ? "startTime" : "endTime";
+  const localDate = record[dateField] || record.shiftDate;
+  const localTime = record[timeField];
+
+  if (localDate && localTime) {
+    const parsedLocal = moment(
+      `${localDate} ${localTime}`,
+      SHIFT_INPUT_FORMATS,
+      true
+    );
+
+    if (parsedLocal.isValid()) {
+      return parsedLocal.format("MMM D, h:mm A");
+    }
+  }
+
+  if (record.shiftDate && record[timestampField]) {
+    const legacyUtc = moment.utc(record[timestampField]);
+
+    if (legacyUtc.isValid()) {
+      return legacyUtc.format("MMM D, h:mm A");
+    }
+  }
+
+  return formatDateTime(record[timestampField]);
 };
 
 const getPhotoUrl = (photoUrl) => {
@@ -139,9 +192,25 @@ const getCategoryColor = (category) => {
   return "default";
 };
 
+const getPhotoFileList = (record) => {
+  if (!record?.photo?.url) {
+    return [];
+  }
+
+  return [
+    {
+      uid: record._id,
+      name: record.photo.originalName || record.photo.filename || "photo",
+      status: "done",
+      url: getPhotoUrl(record.photo.url),
+    },
+  ];
+};
+
 const Status = () => {
   const [shiftForm] = Form.useForm();
   const [errorForm] = Form.useForm();
+  const [editErrorForm] = Form.useForm();
   const [paintRecords, setPaintRecords] = useState([]);
   const [shiftRecords, setShiftRecords] = useState([]);
   const [errorLogs, setErrorLogs] = useState([]);
@@ -149,6 +218,9 @@ const Status = () => {
   const [savingShift, setSavingShift] = useState(false);
   const [savingError, setSavingError] = useState(false);
   const [photoList, setPhotoList] = useState([]);
+  const [editPhotoList, setEditPhotoList] = useState([]);
+  const [editingError, setEditingError] = useState(null);
+  const [updatingError, setUpdatingError] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [shiftValues, setShiftValues] = useState({
     shiftDate: getTodayValue(),
@@ -273,14 +345,7 @@ const Status = () => {
   const handleErrorSubmit = async (values) => {
     const payload = new FormData();
 
-    [
-      "maintenance",
-      "category",
-      "startTime",
-      "endTime",
-      "rootCause",
-      "solution",
-    ].forEach((field) => {
+    ERROR_LOG_FIELDS.forEach((field) => {
       if (values[field]) {
         payload.append(field, values[field]);
       }
@@ -309,12 +374,73 @@ const Status = () => {
     }
   };
 
+  const openEditError = (record) => {
+    setEditingError(record);
+    setEditPhotoList(getPhotoFileList(record));
+    editErrorForm.setFieldsValue({
+      maintenance: record.maintenance || "",
+      category: record.category,
+      startTime: formatDateTimeInput(record.startTime),
+      endTime: formatDateTimeInput(record.endTime),
+      rootCause: record.rootCause || "",
+      solution: record.solution || "",
+      password: "",
+    });
+  };
+
+  const closeEditError = () => {
+    setEditingError(null);
+    setEditPhotoList([]);
+    editErrorForm.resetFields();
+  };
+
+  const handleErrorUpdate = async (values) => {
+    if (!editingError?._id) {
+      return;
+    }
+
+    const payload = new FormData();
+    ERROR_LOG_FIELDS.forEach((field) => {
+      payload.append(field, values[field] ?? "");
+    });
+    payload.append("password", values.password || "");
+
+    if (editPhotoList[0]?.originFileObj) {
+      payload.append("photo", editPhotoList[0].originFileObj);
+    }
+
+    setUpdatingError(true);
+    try {
+      const res = await instance.put(`/errorlog/${editingError._id}`, payload);
+      if (res.data?.code === 0) {
+        message.success("Error log updated");
+        closeEditError();
+        fetchErrorLogs();
+      } else {
+        message.error(res.data?.message || "Failed to update error log");
+      }
+    } catch (error) {
+      console.error("Error updating error log:", error);
+      message.error(error.response?.data?.message || "Failed to update error log");
+    } finally {
+      setUpdatingError(false);
+    }
+  };
+
   const uploadProps = {
     accept: "image/*",
     beforeUpload: () => false,
     fileList: photoList,
     maxCount: 1,
     onChange: ({ fileList }) => setPhotoList(fileList.slice(-1)),
+  };
+
+  const editUploadProps = {
+    accept: "image/*",
+    beforeUpload: () => false,
+    fileList: editPhotoList,
+    maxCount: 1,
+    onChange: ({ fileList }) => setEditPhotoList(fileList.slice(-1)),
   };
 
   const shiftColumns = [
@@ -329,14 +455,14 @@ const Status = () => {
       dataIndex: "startTime",
       key: "startTime",
       width: 150,
-      render: (value) => formatDateTime(value),
+      render: (_, record) => formatShiftHistoryTime(record, "start"),
     },
     {
       title: "End",
       dataIndex: "endTime",
       key: "endTime",
       width: 150,
-      render: (value) => formatDateTime(value),
+      render: (_, record) => formatShiftHistoryTime(record, "end"),
     },
     {
       title: "Runtime",
@@ -423,6 +549,21 @@ const Status = () => {
         ) : (
           "-"
         ),
+    },
+    {
+      title: "Edit",
+      key: "edit",
+      width: 80,
+      render: (_, record) => (
+        <Tooltip title="Edit error log">
+          <Button
+            aria-label="Edit error log"
+            icon={<EditOutlined />}
+            onClick={() => openEditError(record)}
+            type="text"
+          />
+        </Tooltip>
+      ),
     },
   ];
 
@@ -652,11 +793,97 @@ const Status = () => {
             rowKey={(record) => record._id}
             loading={loading}
             pagination={{ pageSize: 6 }}
-            scroll={{ x: 900 }}
+            scroll={{ x: 980 }}
             size="middle"
           />
         </Card>
       </section>
+
+      <Modal
+        destroyOnClose
+        footer={null}
+        onCancel={closeEditError}
+        open={Boolean(editingError)}
+        title="Edit Error Log"
+        width={760}
+      >
+        <Form
+          form={editErrorForm}
+          layout="vertical"
+          onFinish={handleErrorUpdate}
+        >
+          <Row gutter={[12, 0]}>
+            <Col xs={24} md={12}>
+              <Form.Item label="Maintenance" name="maintenance">
+                <Input placeholder="Maintainer or owner" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Category"
+                name="category"
+                rules={[{ required: true, message: "Select a category" }]}
+              >
+                <Select placeholder="Select category">
+                  {ERROR_CATEGORIES.map((category) => (
+                    <Select.Option key={category} value={category}>
+                      {category}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="Start Time" name="startTime">
+                <Input type="datetime-local" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="End Time" name="endTime">
+                <Input type="datetime-local" />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item label="Root Cause" name="rootCause">
+                <TextArea rows={3} placeholder="What caused the issue?" />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item label="Solution" name="solution">
+                <TextArea rows={3} placeholder="What fixed it?" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="Photo">
+                <Upload {...editUploadProps}>
+                  <Button icon={<UploadOutlined />}>Select Photo</Button>
+                </Upload>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Password"
+                name="password"
+                rules={[{ required: true, message: "Enter edit password" }]}
+              >
+                <Input.Password prefix={<LockOutlined />} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <div className="edit-modal-actions">
+            <Button onClick={closeEditError}>Cancel</Button>
+            <Button
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={updatingError}
+              type="primary"
+            >
+              Update Error Log
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };

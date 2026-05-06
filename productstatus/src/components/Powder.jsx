@@ -6,7 +6,7 @@ import {
   Form,
   Input,
   InputNumber,
-  Popconfirm,
+  Modal,
   Row,
   Select,
   Space,
@@ -22,6 +22,7 @@ import {
   DownloadOutlined,
   EditOutlined,
   InboxOutlined,
+  LockOutlined,
   PlusOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -69,6 +70,9 @@ const Powder = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [form] = Form.useForm();
 
   const fetchPowderList = useCallback(async () => {
@@ -172,10 +176,34 @@ const Powder = () => {
     }
   };
 
-  const handleDelete = async (code) => {
+  const openDeleteConfirm = (record) => {
+    setDeleteTarget(record);
+    setDeletePassword("");
+  };
+
+  const closeDeleteConfirm = () => {
+    setDeleteTarget(null);
+    setDeletePassword("");
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.code) {
+      return;
+    }
+
+    if (!deletePassword) {
+      message.warning("Enter the delete password");
+      return;
+    }
+
+    setDeleting(true);
     try {
-      const result = await instance.post("/powder/delete", { code });
+      const result = await instance.post("/powder/delete", {
+        code: deleteTarget.code,
+        password: deletePassword,
+      });
       if (result.data?.code === 0) {
+        closeDeleteConfirm();
         await fetchPowderList();
         message.success("Powder deleted successfully");
       } else {
@@ -183,7 +211,9 @@ const Powder = () => {
       }
     } catch (error) {
       console.error("Error deleting powder:", error);
-      message.error("Failed to delete powder");
+      message.error(error.response?.data?.message || "Failed to delete powder");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -310,17 +340,14 @@ const Powder = () => {
                   onClick={() => startEdit(record)}
                 />
               </Tooltip>
-              <Popconfirm
-                title="Delete powder"
-                description={`Delete ${record.code}?`}
-                okText="Delete"
-                okButtonProps={{ danger: true }}
-                onConfirm={() => handleDelete(record.code)}
-              >
-                <Tooltip title="Delete">
-                  <Button type="text" danger icon={<DeleteOutlined />} />
-                </Tooltip>
-              </Popconfirm>
+              <Tooltip title="Delete">
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => openDeleteConfirm(record)}
+                />
+              </Tooltip>
             </>
           )}
         </Space>
@@ -486,6 +513,30 @@ const Powder = () => {
           size="middle"
         />
       </Card>
+
+      <Modal
+        destroyOnClose
+        okText="Delete"
+        okButtonProps={{ danger: true, loading: deleting }}
+        onCancel={closeDeleteConfirm}
+        onOk={handleDelete}
+        open={Boolean(deleteTarget)}
+        title="Delete Powder"
+      >
+        <Text>
+          Enter password to delete{" "}
+          <strong>{deleteTarget?.code || "this powder"}</strong>.
+        </Text>
+        <Input.Password
+          autoFocus
+          className="powder-delete-password"
+          prefix={<LockOutlined />}
+          placeholder="Password"
+          value={deletePassword}
+          onChange={(event) => setDeletePassword(event.target.value)}
+          onPressEnter={handleDelete}
+        />
+      </Modal>
     </div>
   );
 };

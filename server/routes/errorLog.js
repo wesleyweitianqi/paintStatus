@@ -1,11 +1,20 @@
 const express = require("express");
 const fs = require("fs");
+const moment = require("moment-timezone");
 const multer = require("multer");
 const path = require("path");
 const ErrorLog = require("../models/errorLog");
 
 const router = express.Router();
 const uploadDir = path.resolve(__dirname, "..", "upload", "error");
+const LOCAL_TIMEZONE = process.env.LOCAL_TIMEZONE || "America/Toronto";
+const ERROR_LOG_EDIT_PASSWORD = process.env.ERROR_LOG_EDIT_PASSWORD || "Wes85";
+const DATE_TIME_FORMATS = [
+  "YYYY-MM-DDTHH:mm:ss",
+  "YYYY-MM-DDTHH:mm",
+  "YYYY-MM-DDTH:mm:ss",
+  "YYYY-MM-DDTH:mm",
+];
 
 fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -57,8 +66,14 @@ const parseDate = (value) => {
     return null;
   }
 
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const parsed = moment.tz(
+    String(value).trim(),
+    DATE_TIME_FORMATS,
+    true,
+    LOCAL_TIMEZONE
+  );
+
+  return parsed.isValid() ? parsed.toDate() : null;
 };
 
 const removeUploadedFile = (file) => {
@@ -72,6 +87,32 @@ const removeUploadedFile = (file) => {
     }
   });
 };
+
+const removeStoredPhoto = (photo) => {
+  if (!photo?.path) {
+    return;
+  }
+
+  const filePath = path.resolve(__dirname, "..", photo.path);
+  if (!filePath.startsWith(`${uploadDir}${path.sep}`)) {
+    return;
+  }
+
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      console.error("Failed to remove previous error photo:", err);
+    }
+  });
+};
+
+const buildPhoto = (file) => ({
+  filename: file.filename,
+  originalName: file.originalname,
+  mimetype: file.mimetype,
+  size: file.size,
+  path: path.join("upload", "error", file.filename),
+  url: `/upload/error/${file.filename}`,
+});
 
 router.get("/", async (req, res) => {
   try {
@@ -94,20 +135,12 @@ router.post("/", uploadPhoto, async (req, res) => {
       return;
     }
 
-    const photo = req.file
-      ? {
-          filename: req.file.filename,
-          originalName: req.file.originalname,
-          mimetype: req.file.mimetype,
-          size: req.file.size,
-          path: path.join("upload", "error", req.file.filename),
-          url: `/upload/error/${req.file.filename}`,
-        }
-      : null;
+    const photo = req.file ? buildPhoto(req.file) : null;
 
     const log = await ErrorLog.create({
       maintenance,
       category,
+      timezone: LOCAL_TIMEZONE,
       startTime: parseDate(startTime),
       endTime: parseDate(endTime),
       rootCause,
@@ -120,6 +153,68 @@ router.post("/", uploadPhoto, async (req, res) => {
     removeUploadedFile(req.file);
     console.error("Error saving error log:", err);
     res.status(500).send({ code: 1, message: "Error saving error log" });
+  }
+});
+
+router.put("/:id", uploadPhoto, async (req, res) => {
+  try {
+    const {
+      password,
+      maintenance,
+      category,
+      startTime,
+      endTime,
+      rootCause,
+      solution,
+    } = req.body;
+
+    if (password !== ERROR_LOG_EDIT_PASSWORD) {
+      removeUploadedFile(req.file);
+      res.status(401).send({ code: 1, message: "Invalid edit password" });
+      return;
+    }
+
+    if (!category) {
+      removeUploadedFile(req.file);
+      res.status(400).send({ code: 1, message: "Category is required" });
+      return;
+    }
+
+    const log = await ErrorLog.findById(req.params.id);
+    if (!log) {
+      removeUploadedFile(req.file);
+      res.status(404).send({ code: 1, message: "Error log not found" });
+      return;
+    }
+
+    const previousPhoto =
+      log.photo && typeof log.photo.toObject === "function"
+        ? log.photo.toObject()
+        : log.photo;
+
+    log.maintenance = maintenance;
+    log.category = category;
+    log.timezone = LOCAL_TIMEZONE;
+    log.startTime = parseDate(startTime);
+    log.endTime = parseDate(endTime);
+    log.rootCause = rootCause;
+    log.solution = solution;
+
+    if (req.file) {
+      log.photo = buildPhoto(req.file);
+    }
+
+    await log.save();
+
+    if (req.file) {
+      removeStoredPhoto(previousPhoto);
+    }
+
+    res.send({ code: 0, data: log, message: "Error log updated successfully" });
+  } catch (err) {
+    removeUploadedFile(req.file);
+    console.error("Error updating error log:", err);
+    res.status(500).send({ code: 1, message: "Error updating error log" });
   }
 });
 

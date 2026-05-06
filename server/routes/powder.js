@@ -1,6 +1,7 @@
 var express = require("express");
 var router = express.Router();
 const Powder = require("../models/powder");
+const POWDER_DELETE_PASSWORD = process.env.POWDER_DELETE_PASSWORD || "Wes85";
 
 router.get("/", async (req, res) => {
   try {
@@ -50,15 +51,22 @@ router.post("/update", async (req, res) => {
 
 router.post("/delete", async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, password } = req.body;
+
+    if (password !== POWDER_DELETE_PASSWORD) {
+      res.status(401).send({ code: 1, message: "Invalid delete password" });
+      return;
+    }
+
     const result = await Powder.findOneAndDelete({ code: code });
     if (result) {
       res.send({ code: 0, data: true });
     } else {
-      res.send({ code: 1, data: false });
+      res.send({ code: 1, data: false, message: "Powder not found" });
     }
   } catch (e) {
     console.log(e);
+    res.status(500).send({ code: 1, message: "Failed to delete powder" });
   }
 });
 

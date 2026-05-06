@@ -6,6 +6,14 @@ const shiftEfficiencySchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    timezone: {
+      type: String,
+      default: "America/Toronto",
+    },
+    startDateLocal: String,
+    endDateLocal: String,
+    startTimeLocal: String,
+    endTimeLocal: String,
     startTime: {
       type: Date,
       required: true,

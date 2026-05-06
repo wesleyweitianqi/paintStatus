@@ -1,18 +1,31 @@
 const express = require("express");
+const moment = require("moment-timezone");
 const Painted = require("../models/painted");
 const ShiftEfficiency = require("../models/shiftEfficiency");
 
 const router = express.Router();
 const PLANNED_SHIFT_MINUTES = 8 * 60;
+const LOCAL_TIMEZONE = process.env.LOCAL_TIMEZONE || "America/Toronto";
+const SHIFT_TIME_FORMATS = [
+  "YYYY-MM-DD HH:mm:ss",
+  "YYYY-MM-DD HH:mm",
+  "YYYY-MM-DD H:mm:ss",
+  "YYYY-MM-DD H:mm",
+];
 
-const parseShiftDateTime = (shiftDate, timeValue) => {
+const parseShiftMoment = (shiftDate, timeValue) => {
   if (!shiftDate || !timeValue) {
     return null;
   }
 
-  const normalizedTime = timeValue.length === 5 ? `${timeValue}:00` : timeValue;
-  const date = new Date(`${shiftDate}T${normalizedTime}`);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const parsed = moment.tz(
+    `${shiftDate} ${String(timeValue).trim()}`,
+    SHIFT_TIME_FORMATS,
+    true,
+    LOCAL_TIMEZONE
+  );
+
+  return parsed.isValid() ? parsed : null;
 };
 
 const roundOneDecimal = (value) => Math.round(value * 10) / 10;
@@ -35,8 +48,8 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { shiftDate, startTime, endTime } = req.body;
-    const parsedStart = parseShiftDateTime(shiftDate, startTime);
-    const parsedEnd = parseShiftDateTime(shiftDate, endTime);
+    const parsedStart = parseShiftMoment(shiftDate, startTime);
+    const parsedEnd = parseShiftMoment(shiftDate, endTime);
 
     if (!parsedStart || !parsedEnd) {
       res.status(400).send({
@@ -46,14 +59,12 @@ router.post("/", async (req, res) => {
       return;
     }
 
-    let actualEnd = parsedEnd;
-    if (actualEnd <= parsedStart) {
-      actualEnd = new Date(actualEnd.getTime() + 24 * 60 * 60 * 1000);
+    let actualEnd = parsedEnd.clone();
+    if (!actualEnd.isAfter(parsedStart)) {
+      actualEnd = actualEnd.add(1, "day");
     }
 
-    const runtimeMinutes = Math.round(
-      (actualEnd.getTime() - parsedStart.getTime()) / 60000
-    );
+    const runtimeMinutes = actualEnd.diff(parsedStart, "minutes");
     const downtimeMinutes = Math.max(PLANNED_SHIFT_MINUTES - runtimeMinutes, 0);
     const runtimePercentage = roundOneDecimal(
       (runtimeMinutes / PLANNED_SHIFT_MINUTES) * 100
@@ -61,8 +72,8 @@ router.post("/", async (req, res) => {
 
     const paintRecords = await Painted.find({
       createdAt: {
-        $gte: parsedStart,
-        $lte: actualEnd,
+        $gte: parsedStart.toDate(),
+        $lte: actualEnd.toDate(),
       },
     });
 
@@ -72,9 +83,14 @@ router.post("/", async (req, res) => {
     }, 0);
 
     const record = await ShiftEfficiency.create({
-      shiftDate,
-      startTime: parsedStart,
-      endTime: actualEnd,
+      shiftDate: parsedStart.format("YYYY-MM-DD"),
+      timezone: LOCAL_TIMEZONE,
+      startDateLocal: parsedStart.format("YYYY-MM-DD"),
+      endDateLocal: actualEnd.format("YYYY-MM-DD"),
+      startTimeLocal: parsedStart.format("HH:mm"),
+      endTimeLocal: actualEnd.format("HH:mm"),
+      startTime: parsedStart.toDate(),
+      endTime: actualEnd.toDate(),
       plannedMinutes: PLANNED_SHIFT_MINUTES,
       runtimeMinutes,
       downtimeMinutes,

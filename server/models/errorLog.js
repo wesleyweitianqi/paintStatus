@@ -7,6 +7,10 @@ const errorLogSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    timezone: {
+      type: String,
+      default: "America/Toronto",
+    },
     startTime: Date,
     endTime: Date,
     rootCause: String,

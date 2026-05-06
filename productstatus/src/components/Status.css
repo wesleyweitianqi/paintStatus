@@ -166,6 +166,13 @@
   padding-right: 0;
 }
 
+.edit-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
 @media (max-width: 1120px) {
   .metric-grid.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));

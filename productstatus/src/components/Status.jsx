@@ -9,6 +9,7 @@ import {
   Progress,
   Row,
   Select,
+  Space,
   Statistic,
   Table,
   Tag,
@@ -25,6 +26,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DashboardOutlined,
+  DeleteOutlined,
   EditOutlined,
   FieldTimeOutlined,
   FileImageOutlined,
@@ -68,6 +70,9 @@ const ERROR_LOG_FIELDS = [
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
 const getTodayValue = () => moment().format("YYYY-MM-DD");
+const getCurrentTimeValue = () => moment().format("HH:mm");
+const hasField = (values, field) =>
+  Object.prototype.hasOwnProperty.call(values, field);
 
 const parseShiftDateTime = (shiftDate, timeValue) => {
   if (!shiftDate || !timeValue) {
@@ -164,6 +169,27 @@ const formatShiftHistoryTime = (record, boundary) => {
   return formatDateTime(record[timestampField]);
 };
 
+const getShiftEditValues = (record) => {
+  const startDate = record.startDateLocal || record.shiftDate || "";
+  const endDate = record.endDateLocal || record.shiftDate || "";
+  const startTime =
+    record.startTimeLocal ||
+    (record.startTime && moment.utc(record.startTime).format("HH:mm")) ||
+    "";
+  const endTime =
+    record.endTimeLocal ||
+    (record.endTime && moment.utc(record.endTime).format("HH:mm")) ||
+    "";
+
+  return {
+    shiftDate: startDate,
+    startTime,
+    endTime,
+    endDate,
+    password: "",
+  };
+};
+
 const getPhotoUrl = (photoUrl) => {
   if (!photoUrl) {
     return "";
@@ -209,6 +235,7 @@ const getPhotoFileList = (record) => {
 
 const Status = () => {
   const [shiftForm] = Form.useForm();
+  const [editShiftForm] = Form.useForm();
   const [errorForm] = Form.useForm();
   const [editErrorForm] = Form.useForm();
   const [paintRecords, setPaintRecords] = useState([]);
@@ -216,6 +243,12 @@ const Status = () => {
   const [errorLogs, setErrorLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingShift, setSavingShift] = useState(false);
+  const [isShiftEndManual, setIsShiftEndManual] = useState(false);
+  const [editingShift, setEditingShift] = useState(null);
+  const [updatingShift, setUpdatingShift] = useState(false);
+  const [deleteShiftTarget, setDeleteShiftTarget] = useState(null);
+  const [deleteShiftPassword, setDeleteShiftPassword] = useState("");
+  const [deletingShift, setDeletingShift] = useState(false);
   const [savingError, setSavingError] = useState(false);
   const [photoList, setPhotoList] = useState([]);
   const [editPhotoList, setEditPhotoList] = useState([]);
@@ -275,6 +308,32 @@ const Status = () => {
     fetchDashboard();
   }, [fetchDashboard]);
 
+  useEffect(() => {
+    if (!shiftValues.startTime || isShiftEndManual) {
+      return undefined;
+    }
+
+    const syncEndTimeToNow = () => {
+      const currentTime = getCurrentTimeValue();
+      shiftForm.setFieldsValue({ endTime: currentTime });
+      setShiftValues((prevValues) => {
+        if (!prevValues.startTime || prevValues.endTime === currentTime) {
+          return prevValues;
+        }
+
+        return {
+          ...prevValues,
+          endTime: currentTime,
+        };
+      });
+    };
+
+    syncEndTimeToNow();
+    const interval = window.setInterval(syncEndTimeToNow, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [isShiftEndManual, shiftForm, shiftValues.startTime]);
+
   const shiftPreview = useMemo(() => {
     const window = getShiftWindow(shiftValues);
 
@@ -325,9 +384,14 @@ const Status = () => {
   }, [paintRecords, shiftValues]);
 
   const handleShiftSubmit = async (values) => {
+    const payload = {
+      ...values,
+      endTime: values.endTime || getCurrentTimeValue(),
+    };
+
     setSavingShift(true);
     try {
-      const res = await instance.post("/shiftefficiency", values);
+      const res = await instance.post("/shiftefficiency", payload);
       if (res.data?.code === 0) {
         message.success("Shift efficiency record saved");
         fetchShiftRecords();
@@ -339,6 +403,118 @@ const Status = () => {
       message.error("Failed to save shift record");
     } finally {
       setSavingShift(false);
+    }
+  };
+
+  const handleShiftValuesChange = (changedValues, values) => {
+    const nextValues = { ...values };
+
+    if (hasField(changedValues, "endTime")) {
+      setIsShiftEndManual(Boolean(changedValues.endTime));
+    }
+
+    if (hasField(changedValues, "startTime") && !changedValues.startTime) {
+      setIsShiftEndManual(false);
+      nextValues.endTime = "";
+      shiftForm.setFieldsValue({ endTime: "" });
+    }
+
+    if (
+      hasField(changedValues, "startTime") &&
+      changedValues.startTime &&
+      !isShiftEndManual &&
+      !nextValues.endTime
+    ) {
+      const currentTime = getCurrentTimeValue();
+      nextValues.endTime = currentTime;
+      shiftForm.setFieldsValue({ endTime: currentTime });
+    }
+
+    setShiftValues(nextValues);
+  };
+
+  const openEditShift = (record) => {
+    setEditingShift(record);
+    editShiftForm.setFieldsValue(getShiftEditValues(record));
+  };
+
+  const closeEditShift = () => {
+    setEditingShift(null);
+    editShiftForm.resetFields();
+  };
+
+  const handleShiftUpdate = async (values) => {
+    if (!editingShift?._id) {
+      return;
+    }
+
+    setUpdatingShift(true);
+    try {
+      const res = await instance.put(
+        `/shiftefficiency/${editingShift._id}`,
+        values
+      );
+
+      if (res.data?.code === 0) {
+        message.success("Shift efficiency record updated");
+        closeEditShift();
+        fetchShiftRecords();
+      } else {
+        message.error(res.data?.message || "Failed to update shift record");
+      }
+    } catch (error) {
+      console.error("Error updating shift efficiency record:", error);
+      message.error(
+        error.response?.data?.message || "Failed to update shift record"
+      );
+    } finally {
+      setUpdatingShift(false);
+    }
+  };
+
+  const openDeleteShift = (record) => {
+    setDeleteShiftTarget(record);
+    setDeleteShiftPassword("");
+  };
+
+  const closeDeleteShift = () => {
+    setDeleteShiftTarget(null);
+    setDeleteShiftPassword("");
+  };
+
+  const handleShiftDelete = async () => {
+    if (!deleteShiftTarget?._id) {
+      return;
+    }
+
+    if (!deleteShiftPassword) {
+      message.warning("Enter the delete password");
+      return;
+    }
+
+    setDeletingShift(true);
+    try {
+      const res = await instance.delete(
+        `/shiftefficiency/${deleteShiftTarget._id}`,
+        {
+          data: { password: deleteShiftPassword },
+        }
+      );
+
+      if (res.data?.code === 0) {
+        message.success("Shift efficiency record deleted");
+        closeDeleteShift();
+        fetchShiftRecords();
+      } else {
+        message.error(res.data?.message || "Failed to delete shift record");
+      }
+    } catch (error) {
+      console.error("Error deleting shift efficiency record:", error);
+      message.error(
+        error.response?.data?.message || "Failed to delete shift record"
+      );
+    } finally {
+      setDeletingShift(false);
     }
   };
 
@@ -490,6 +666,32 @@ const Status = () => {
       key: "paintQty",
       width: 100,
     },
+    {
+      title: "Action",
+      key: "action",
+      width: 100,
+      render: (_, record) => (
+        <Space size={4}>
+          <Tooltip title="Edit shift record">
+            <Button
+              aria-label="Edit shift record"
+              icon={<EditOutlined />}
+              onClick={() => openEditShift(record)}
+              type="text"
+            />
+          </Tooltip>
+          <Tooltip title="Delete shift record">
+            <Button
+              aria-label="Delete shift record"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => openDeleteShift(record)}
+              type="text"
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
   ];
 
   const errorColumns = [
@@ -596,7 +798,7 @@ const Status = () => {
             layout="vertical"
             initialValues={shiftValues}
             onFinish={handleShiftSubmit}
-            onValuesChange={(_, values) => setShiftValues(values)}
+            onValuesChange={handleShiftValuesChange}
           >
             <Row gutter={[12, 0]}>
               <Col xs={24} md={8}>
@@ -619,17 +821,17 @@ const Status = () => {
               </Col>
               <Col xs={24} md={8}>
                 <Form.Item
+                  extra="Auto-fills to current time after start time is entered."
                   label="End Time"
                   name="endTime"
-                  rules={[{ required: true, message: "Enter end time" }]}
                 >
                   <Input type="time" />
                 </Form.Item>
               </Col>
             </Row>
             <Text className="shift-help">
-              Planned shift is fixed at 8 hours. If end time is earlier than
-              start time, it is treated as the next day.
+              Planned shift is fixed at 8 hours. End time follows current time
+              until manually changed.
             </Text>
             <Button
               type="primary"
@@ -704,10 +906,101 @@ const Status = () => {
           rowKey={(record) => record._id}
           loading={loading}
           pagination={{ pageSize: 6 }}
-          scroll={{ x: 860 }}
+          scroll={{ x: 980 }}
           size="middle"
         />
       </Card>
+
+      <Modal
+        destroyOnClose
+        footer={null}
+        onCancel={closeEditShift}
+        open={Boolean(editingShift)}
+        title="Edit Shift Efficiency Record"
+        width={680}
+      >
+        <Form
+          form={editShiftForm}
+          layout="vertical"
+          onFinish={handleShiftUpdate}
+        >
+          <Row gutter={[12, 0]}>
+            <Col xs={24} md={8}>
+              <Form.Item
+                label="Shift Date"
+                name="shiftDate"
+                rules={[{ required: true, message: "Select shift date" }]}
+              >
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item
+                label="Start Time"
+                name="startTime"
+                rules={[{ required: true, message: "Enter start time" }]}
+              >
+                <Input type="time" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item
+                label="End Time"
+                name="endTime"
+                rules={[{ required: true, message: "Enter end time" }]}
+              >
+                <Input type="time" />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item
+                label="Password"
+                name="password"
+                rules={[{ required: true, message: "Enter edit password" }]}
+              >
+                <Input.Password prefix={<LockOutlined />} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <div className="edit-modal-actions">
+            <Button onClick={closeEditShift}>Cancel</Button>
+            <Button
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={updatingShift}
+              type="primary"
+            >
+              Update Shift Record
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      <Modal
+        destroyOnClose
+        okButtonProps={{ danger: true, loading: deletingShift }}
+        okText="Delete"
+        onCancel={closeDeleteShift}
+        onOk={handleShiftDelete}
+        open={Boolean(deleteShiftTarget)}
+        title="Delete Shift Efficiency Record"
+      >
+        <Text>
+          Enter password to delete the{" "}
+          <strong>{deleteShiftTarget?.shiftDate || "selected"}</strong> shift
+          record.
+        </Text>
+        <Input.Password
+          autoFocus
+          className="delete-password-input"
+          prefix={<LockOutlined />}
+          placeholder="Password"
+          value={deleteShiftPassword}
+          onChange={(event) => setDeleteShiftPassword(event.target.value)}
+          onPressEnter={handleShiftDelete}
+        />
+      </Modal>
 
       <section className="error-log-grid">
         <Card

@@ -20,6 +20,7 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   DownloadOutlined,
+  ExportOutlined,
   FileTextOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
@@ -34,7 +35,8 @@ import styles from "../styles/coreclamp.module.scss";
 const { Text, Title } = Typography;
 const { TextArea } = Input;
 
-const FILE_HOST = "https://192.168.1.169:8080";
+const FILE_HOST = "http://192.168.1.34:8080";
+const CORECLAMPS_LIST_URL = "http://192.168.1.34:8083/api/coreclamps/list";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -633,7 +635,22 @@ function CoreClamp() {
 
       <Card
         className={styles.dashboardCard}
-        title="History"
+        title={
+          <Space size={8} wrap>
+            <span>History</span>
+            <Tooltip title="Open core clamps list">
+              <Button
+                size="small"
+                icon={<ExportOutlined />}
+                href={CORECLAMPS_LIST_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                List
+              </Button>
+            </Tooltip>
+          </Space>
+        }
         extra={<Tag>{completedList.length} this year</Tag>}
       >
         <Table

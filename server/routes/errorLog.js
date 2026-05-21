@@ -9,6 +9,7 @@ const router = express.Router();
 const uploadDir = path.resolve(__dirname, "..", "upload", "error");
 const LOCAL_TIMEZONE = process.env.LOCAL_TIMEZONE || "America/Toronto";
 const ERROR_LOG_EDIT_PASSWORD = process.env.ERROR_LOG_EDIT_PASSWORD || "Wes85";
+const MAX_ERROR_PHOTOS = 10;
 const DATE_TIME_FORMATS = [
   "YYYY-MM-DDTHH:mm:ss",
   "YYYY-MM-DDTHH:mm",
@@ -17,6 +18,8 @@ const DATE_TIME_FORMATS = [
 ];
 
 fs.mkdirSync(uploadDir, { recursive: true });
+
+const toArray = (value) => (Array.isArray(value) ? value : []);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -50,9 +53,13 @@ const upload = multer({
   },
 });
 
-const uploadPhoto = (req, res, next) => {
-  upload.single("photo")(req, res, (err) => {
+const uploadPhotos = (req, res, next) => {
+  upload.fields([
+    { name: "photos", maxCount: MAX_ERROR_PHOTOS },
+    { name: "photo", maxCount: 1 },
+  ])(req, res, (err) => {
     if (err) {
+      removeUploadedFiles(getUploadedFiles(req));
       res.status(400).send({ code: 1, message: err.message });
       return;
     }
@@ -76,6 +83,11 @@ const parseDate = (value) => {
   return parsed.isValid() ? parsed.toDate() : null;
 };
 
+const getUploadedFiles = (req) => [
+  ...toArray(req.files?.photos),
+  ...toArray(req.files?.photo),
+];
+
 const removeUploadedFile = (file) => {
   if (!file?.path) {
     return;
@@ -86,6 +98,10 @@ const removeUploadedFile = (file) => {
       console.error("Failed to remove uploaded error photo:", err);
     }
   });
+};
+
+const removeUploadedFiles = (files) => {
+  toArray(files).forEach(removeUploadedFile);
 };
 
 const removeStoredPhoto = (photo) => {
@@ -105,6 +121,10 @@ const removeStoredPhoto = (photo) => {
   });
 };
 
+const removeStoredPhotos = (photos) => {
+  toArray(photos).forEach(removeStoredPhoto);
+};
+
 const buildPhoto = (file) => ({
   filename: file.filename,
   originalName: file.originalname,
@@ -113,6 +133,68 @@ const buildPhoto = (file) => ({
   path: path.join("upload", "error", file.filename),
   url: `/upload/error/${file.filename}`,
 });
+
+const toPlainPhoto = (photo) => {
+  if (!photo) {
+    return null;
+  }
+
+  return typeof photo.toObject === "function" ? photo.toObject() : photo;
+};
+
+const isSamePhoto = (leftPhoto, rightPhoto) => {
+  const left = toPlainPhoto(leftPhoto);
+  const right = toPlainPhoto(rightPhoto);
+
+  return Boolean(
+    left &&
+      right &&
+      ((left.url && left.url === right.url) ||
+        (left.filename && left.filename === right.filename))
+  );
+};
+
+const getStoredPhotos = (log) => {
+  const photos = toArray(log.photos)
+    .map(toPlainPhoto)
+    .filter((photo) => photo?.url);
+  const legacyPhoto = toPlainPhoto(log.photo);
+
+  if (
+    legacyPhoto?.url &&
+    !photos.some((photo) => isSamePhoto(photo, legacyPhoto))
+  ) {
+    return [legacyPhoto, ...photos];
+  }
+
+  return photos;
+};
+
+const parseKeptPhotoKeys = (value) => {
+  if (value === undefined) {
+    return null;
+  }
+
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return new Set(toArray(parsed).map(String));
+  } catch {
+    return new Set();
+  }
+};
+
+const shouldKeepPhoto = (photo, keptPhotoKeys) => {
+  const plainPhoto = toPlainPhoto(photo);
+  const keys = [
+    plainPhoto?._id,
+    plainPhoto?.url,
+    plainPhoto?.filename,
+  ]
+    .filter(Boolean)
+    .map(String);
+
+  return keys.some((key) => keptPhotoKeys.has(key));
+};
 
 router.get("/", async (req, res) => {
   try {
@@ -124,18 +206,29 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", uploadPhoto, async (req, res) => {
+router.post("/", uploadPhotos, async (req, res) => {
+  const uploadedFiles = getUploadedFiles(req);
+
   try {
     const { maintenance, category, startTime, endTime, rootCause, solution } =
       req.body;
 
     if (!category) {
-      removeUploadedFile(req.file);
+      removeUploadedFiles(uploadedFiles);
       res.status(400).send({ code: 1, message: "Category is required" });
       return;
     }
 
-    const photo = req.file ? buildPhoto(req.file) : null;
+    if (uploadedFiles.length > MAX_ERROR_PHOTOS) {
+      removeUploadedFiles(uploadedFiles);
+      res.status(400).send({
+        code: 1,
+        message: `Upload up to ${MAX_ERROR_PHOTOS} photos`,
+      });
+      return;
+    }
+
+    const photos = uploadedFiles.map(buildPhoto);
 
     const log = await ErrorLog.create({
       maintenance,
@@ -145,18 +238,21 @@ router.post("/", uploadPhoto, async (req, res) => {
       endTime: parseDate(endTime),
       rootCause,
       solution,
-      photo,
+      photo: photos[0] || null,
+      photos,
     });
 
     res.send({ code: 0, data: log, message: "Error log saved successfully" });
   } catch (err) {
-    removeUploadedFile(req.file);
+    removeUploadedFiles(uploadedFiles);
     console.error("Error saving error log:", err);
     res.status(500).send({ code: 1, message: "Error saving error log" });
   }
 });
 
-router.put("/:id", uploadPhoto, async (req, res) => {
+router.put("/:id", uploadPhotos, async (req, res) => {
+  const uploadedFiles = getUploadedFiles(req);
+
   try {
     const {
       password,
@@ -169,28 +265,43 @@ router.put("/:id", uploadPhoto, async (req, res) => {
     } = req.body;
 
     if (password !== ERROR_LOG_EDIT_PASSWORD) {
-      removeUploadedFile(req.file);
+      removeUploadedFiles(uploadedFiles);
       res.status(401).send({ code: 1, message: "Invalid edit password" });
       return;
     }
 
     if (!category) {
-      removeUploadedFile(req.file);
+      removeUploadedFiles(uploadedFiles);
       res.status(400).send({ code: 1, message: "Category is required" });
       return;
     }
 
     const log = await ErrorLog.findById(req.params.id);
     if (!log) {
-      removeUploadedFile(req.file);
+      removeUploadedFiles(uploadedFiles);
       res.status(404).send({ code: 1, message: "Error log not found" });
       return;
     }
 
-    const previousPhoto =
-      log.photo && typeof log.photo.toObject === "function"
-        ? log.photo.toObject()
-        : log.photo;
+    const existingPhotos = getStoredPhotos(log);
+    const keptPhotoKeys = parseKeptPhotoKeys(req.body.keptPhotoKeys);
+    const keptExistingPhotos = keptPhotoKeys
+      ? existingPhotos.filter((photo) => shouldKeepPhoto(photo, keptPhotoKeys))
+      : existingPhotos;
+    const removedPhotos = keptPhotoKeys
+      ? existingPhotos.filter((photo) => !shouldKeepPhoto(photo, keptPhotoKeys))
+      : [];
+    const newPhotos = uploadedFiles.map(buildPhoto);
+    const nextPhotos = [...keptExistingPhotos, ...newPhotos];
+
+    if (nextPhotos.length > MAX_ERROR_PHOTOS) {
+      removeUploadedFiles(uploadedFiles);
+      res.status(400).send({
+        code: 1,
+        message: `Keep up to ${MAX_ERROR_PHOTOS} photos per log`,
+      });
+      return;
+    }
 
     log.maintenance = maintenance;
     log.category = category;
@@ -199,20 +310,16 @@ router.put("/:id", uploadPhoto, async (req, res) => {
     log.endTime = parseDate(endTime);
     log.rootCause = rootCause;
     log.solution = solution;
-
-    if (req.file) {
-      log.photo = buildPhoto(req.file);
-    }
+    log.photos = nextPhotos;
+    log.photo = nextPhotos[0] || null;
 
     await log.save();
 
-    if (req.file) {
-      removeStoredPhoto(previousPhoto);
-    }
+    removeStoredPhotos(removedPhotos);
 
     res.send({ code: 0, data: log, message: "Error log updated successfully" });
   } catch (err) {
-    removeUploadedFile(req.file);
+    removeUploadedFiles(uploadedFiles);
     console.error("Error updating error log:", err);
     res.status(500).send({ code: 1, message: "Error updating error log" });
   }

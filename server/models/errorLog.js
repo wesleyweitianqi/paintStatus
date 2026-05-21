@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const photoSchema = new mongoose.Schema({
+  filename: String,
+  originalName: String,
+  mimetype: String,
+  size: Number,
+  path: String,
+  url: String,
+});
+
 const errorLogSchema = new mongoose.Schema(
   {
     maintenance: String,
@@ -15,14 +24,8 @@ const errorLogSchema = new mongoose.Schema(
     endTime: Date,
     rootCause: String,
     solution: String,
-    photo: {
-      filename: String,
-      originalName: String,
-      mimetype: String,
-      size: Number,
-      path: String,
-      url: String,
-    },
+    photo: photoSchema,
+    photos: [photoSchema],
   },
   { timestamps: true }
 );

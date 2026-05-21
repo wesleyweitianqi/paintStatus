@@ -66,6 +66,7 @@ const ERROR_LOG_FIELDS = [
   "rootCause",
   "solution",
 ];
+const MAX_ERROR_PHOTOS = 10;
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -218,20 +219,54 @@ const getCategoryColor = (category) => {
   return "default";
 };
 
-const getPhotoFileList = (record) => {
-  if (!record?.photo?.url) {
-    return [];
+const getPhotoKey = (photo, index = 0) =>
+  String(photo?.url || photo?.filename || photo?._id || `photo-${index}`);
+
+const isSamePhoto = (leftPhoto, rightPhoto) =>
+  Boolean(
+    leftPhoto &&
+      rightPhoto &&
+      ((leftPhoto.url && leftPhoto.url === rightPhoto.url) ||
+        (leftPhoto.filename && leftPhoto.filename === rightPhoto.filename))
+  );
+
+const getRecordPhotos = (record) => {
+  const photos = toArray(record?.photos).filter((photo) => photo?.url);
+  const legacyPhoto = record?.photo;
+
+  if (
+    legacyPhoto?.url &&
+    !photos.some((photo) => isSamePhoto(photo, legacyPhoto))
+  ) {
+    return [legacyPhoto, ...photos];
   }
 
-  return [
-    {
-      uid: record._id,
-      name: record.photo.originalName || record.photo.filename || "photo",
-      status: "done",
-      url: getPhotoUrl(record.photo.url),
-    },
-  ];
+  return photos;
 };
+
+const getPhotoFileList = (record) => {
+  return getRecordPhotos(record).map((photo, index) => ({
+    uid: getPhotoKey(photo, index),
+    name: photo.originalName || photo.filename || `photo-${index + 1}`,
+    status: "done",
+    url: getPhotoUrl(photo.url),
+  }));
+};
+
+const appendNewPhotos = (payload, files) => {
+  toArray(files).forEach((file) => {
+    if (file.originFileObj) {
+      payload.append("photos", file.originFileObj);
+    }
+  });
+};
+
+const getKeptPhotoKeys = (files) =>
+  toArray(files)
+    .filter((file) => !file.originFileObj)
+    .map((file) => String(file.uid));
+
+const limitPhotoList = (fileList) => fileList.slice(0, MAX_ERROR_PHOTOS);
 
 const Status = () => {
   const [shiftForm] = Form.useForm();
@@ -527,9 +562,7 @@ const Status = () => {
       }
     });
 
-    if (photoList[0]?.originFileObj) {
-      payload.append("photo", photoList[0].originFileObj);
-    }
+    appendNewPhotos(payload, photoList);
 
     setSavingError(true);
     try {
@@ -581,9 +614,11 @@ const Status = () => {
     });
     payload.append("password", values.password || "");
 
-    if (editPhotoList[0]?.originFileObj) {
-      payload.append("photo", editPhotoList[0].originFileObj);
-    }
+    appendNewPhotos(payload, editPhotoList);
+    payload.append(
+      "keptPhotoKeys",
+      JSON.stringify(getKeptPhotoKeys(editPhotoList))
+    );
 
     setUpdatingError(true);
     try {
@@ -597,7 +632,9 @@ const Status = () => {
       }
     } catch (error) {
       console.error("Error updating error log:", error);
-      message.error(error.response?.data?.message || "Failed to update error log");
+      message.error(
+        error.response?.data?.message || "Failed to update error log"
+      );
     } finally {
       setUpdatingError(false);
     }
@@ -607,16 +644,20 @@ const Status = () => {
     accept: "image/*",
     beforeUpload: () => false,
     fileList: photoList,
-    maxCount: 1,
-    onChange: ({ fileList }) => setPhotoList(fileList.slice(-1)),
+    listType: "picture",
+    maxCount: MAX_ERROR_PHOTOS,
+    multiple: true,
+    onChange: ({ fileList }) => setPhotoList(limitPhotoList(fileList)),
   };
 
   const editUploadProps = {
     accept: "image/*",
     beforeUpload: () => false,
     fileList: editPhotoList,
-    maxCount: 1,
-    onChange: ({ fileList }) => setEditPhotoList(fileList.slice(-1)),
+    listType: "picture",
+    maxCount: MAX_ERROR_PHOTOS,
+    multiple: true,
+    onChange: ({ fileList }) => setEditPhotoList(limitPhotoList(fileList)),
   };
 
   const shiftColumns = [
@@ -734,23 +775,31 @@ const Status = () => {
       render: (value) => value || "-",
     },
     {
-      title: "Photo",
-      key: "photo",
-      width: 100,
-      render: (_, record) =>
-        record.photo?.url ? (
-          <Button
-            type="link"
-            icon={<FileImageOutlined />}
-            href={getPhotoUrl(record.photo.url)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View
-          </Button>
+      title: "Photos",
+      key: "photos",
+      width: 180,
+      render: (_, record) => {
+        const photos = getRecordPhotos(record);
+
+        return photos.length ? (
+          <Space size={4} wrap>
+            {photos.map((photo, index) => (
+              <Button
+                key={getPhotoKey(photo, index)}
+                type="link"
+                icon={<FileImageOutlined />}
+                href={getPhotoUrl(photo.url)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View {index + 1}
+              </Button>
+            ))}
+          </Space>
         ) : (
           "-"
-        ),
+        );
+      },
     },
     {
       title: "Edit",
@@ -1055,9 +1104,9 @@ const Status = () => {
                 </Form.Item>
               </Col>
               <Col xs={24}>
-                <Form.Item label="Photo">
+                <Form.Item label="Photos">
                   <Upload {...uploadProps}>
-                    <Button icon={<UploadOutlined />}>Select Photo</Button>
+                    <Button icon={<UploadOutlined />}>Select Photos</Button>
                   </Upload>
                 </Form.Item>
               </Col>
@@ -1147,9 +1196,9 @@ const Status = () => {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="Photo">
+              <Form.Item label="Photos">
                 <Upload {...editUploadProps}>
-                  <Button icon={<UploadOutlined />}>Select Photo</Button>
+                  <Button icon={<UploadOutlined />}>Select Photos</Button>
                 </Upload>
               </Form.Item>
             </Col>

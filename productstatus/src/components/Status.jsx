@@ -289,6 +289,7 @@ const Status = () => {
   const [editPhotoList, setEditPhotoList] = useState([]);
   const [editingError, setEditingError] = useState(null);
   const [updatingError, setUpdatingError] = useState(false);
+  const [deletingError, setDeletingError] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [shiftValues, setShiftValues] = useState({
     shiftDate: getTodayValue(),
@@ -577,7 +578,9 @@ const Status = () => {
       }
     } catch (error) {
       console.error("Error saving error log:", error);
-      message.error("Failed to save error log");
+      message.error(
+        error.response?.data?.message || "Failed to save error log"
+      );
     } finally {
       setSavingError(false);
     }
@@ -640,6 +643,50 @@ const Status = () => {
     }
   };
 
+  const handleErrorDelete = () => {
+    if (!editingError?._id) {
+      return;
+    }
+
+    const password = editErrorForm.getFieldValue("password");
+
+    if (!password) {
+      editErrorForm.validateFields(["password"]).catch(() => {});
+      message.warning("Enter the delete password");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Delete Error Log",
+      content: "Delete this error log and its attached photos?",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setDeletingError(true);
+        try {
+          const res = await instance.delete(`/errorlog/${editingError._id}`, {
+            data: { password },
+          });
+
+          if (res.data?.code === 0) {
+            message.success("Error log deleted");
+            closeEditError();
+            fetchErrorLogs();
+          } else {
+            message.error(res.data?.message || "Failed to delete error log");
+          }
+        } catch (error) {
+          console.error("Error deleting error log:", error);
+          message.error(
+            error.response?.data?.message || "Failed to delete error log"
+          );
+        } finally {
+          setDeletingError(false);
+        }
+      },
+    });
+  };
+
   const uploadProps = {
     accept: "image/*",
     beforeUpload: () => false,
@@ -647,6 +694,7 @@ const Status = () => {
     listType: "picture",
     maxCount: MAX_ERROR_PHOTOS,
     multiple: true,
+    name: "photos",
     onChange: ({ fileList }) => setPhotoList(limitPhotoList(fileList)),
   };
 
@@ -657,6 +705,7 @@ const Status = () => {
     listType: "picture",
     maxCount: MAX_ERROR_PHOTOS,
     multiple: true,
+    name: "photos",
     onChange: ({ fileList }) => setEditPhotoList(limitPhotoList(fileList)),
   };
 
@@ -1216,9 +1265,19 @@ const Status = () => {
           <div className="edit-modal-actions">
             <Button onClick={closeEditError}>Cancel</Button>
             <Button
+              danger
+              disabled={updatingError}
+              icon={<DeleteOutlined />}
+              loading={deletingError}
+              onClick={handleErrorDelete}
+            >
+              Delete Error Log
+            </Button>
+            <Button
               htmlType="submit"
               icon={<SaveOutlined />}
               loading={updatingError}
+              disabled={deletingError}
               type="primary"
             >
               Update Error Log

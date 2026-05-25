@@ -10,6 +10,18 @@ const uploadDir = path.resolve(__dirname, "..", "upload", "error");
 const LOCAL_TIMEZONE = process.env.LOCAL_TIMEZONE || "America/Toronto";
 const ERROR_LOG_EDIT_PASSWORD = process.env.ERROR_LOG_EDIT_PASSWORD || "Wes85";
 const MAX_ERROR_PHOTOS = 10;
+const PHOTO_FIELD_NAMES = new Set([
+  "photos",
+  "photo",
+  "photos[]",
+  "photo[]",
+  "file",
+  "files",
+  "image",
+  "images",
+  "attachment",
+  "attachments",
+]);
 const DATE_TIME_FORMATS = [
   "YYYY-MM-DDTHH:mm:ss",
   "YYYY-MM-DDTHH:mm",
@@ -53,14 +65,46 @@ const upload = multer({
   },
 });
 
+const getUploadedFiles = (req) => {
+  if (Array.isArray(req.files)) {
+    return req.files;
+  }
+
+  return [
+    ...toArray(req.files?.photos),
+    ...toArray(req.files?.photo),
+    ...toArray(req.files?.["photos[]"]),
+    ...toArray(req.files?.["photo[]"]),
+    ...toArray(req.files?.file),
+    ...toArray(req.files?.files),
+    ...toArray(req.files?.image),
+    ...toArray(req.files?.images),
+    ...toArray(req.files?.attachment),
+    ...toArray(req.files?.attachments),
+  ];
+};
+
 const uploadPhotos = (req, res, next) => {
-  upload.fields([
-    { name: "photos", maxCount: MAX_ERROR_PHOTOS },
-    { name: "photo", maxCount: 1 },
-  ])(req, res, (err) => {
+  upload.any()(req, res, (err) => {
+    const uploadedFiles = getUploadedFiles(req);
+
     if (err) {
-      removeUploadedFiles(getUploadedFiles(req));
+      removeUploadedFiles(uploadedFiles);
       res.status(400).send({ code: 1, message: err.message });
+      return;
+    }
+
+    const unexpectedFile = uploadedFiles.find(
+      (file) => !PHOTO_FIELD_NAMES.has(file.fieldname)
+    );
+
+    if (unexpectedFile) {
+      removeUploadedFiles(uploadedFiles);
+      res.status(400).send({
+        code: 1,
+        message:
+          "Unexpected photo field. Attach images using the photos field.",
+      });
       return;
     }
 
@@ -82,11 +126,6 @@ const parseDate = (value) => {
 
   return parsed.isValid() ? parsed.toDate() : null;
 };
-
-const getUploadedFiles = (req) => [
-  ...toArray(req.files?.photos),
-  ...toArray(req.files?.photo),
-];
 
 const removeUploadedFile = (file) => {
   if (!file?.path) {
@@ -322,6 +361,34 @@ router.put("/:id", uploadPhotos, async (req, res) => {
     removeUploadedFiles(uploadedFiles);
     console.error("Error updating error log:", err);
     res.status(500).send({ code: 1, message: "Error updating error log" });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const { password } = req.body || {};
+
+    if (password !== ERROR_LOG_EDIT_PASSWORD) {
+      res.status(401).send({ code: 1, message: "Invalid delete password" });
+      return;
+    }
+
+    const log = await ErrorLog.findByIdAndDelete(req.params.id);
+    if (!log) {
+      res.status(404).send({ code: 1, message: "Error log not found" });
+      return;
+    }
+
+    removeStoredPhotos(getStoredPhotos(log));
+
+    res.send({
+      code: 0,
+      data: true,
+      message: "Error log deleted successfully",
+    });
+  } catch (err) {
+    console.error("Error deleting error log:", err);
+    res.status(500).send({ code: 1, message: "Error deleting error log" });
   }
 });
 

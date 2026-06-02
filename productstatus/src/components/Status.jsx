@@ -89,17 +89,22 @@ const parseShiftDateTime = (shiftDate, timeValue) => {
   return parsed.isValid() ? parsed.toDate() : null;
 };
 
-const getShiftWindow = ({ shiftDate, startTime, endTime }) => {
+const getShiftWindow = ({ shiftDate, startTime, endDate, endTime }) => {
   const start = parseShiftDateTime(shiftDate, startTime);
-  const end = parseShiftDateTime(shiftDate, endTime);
+  const hasExplicitEndDate = Boolean(endDate);
+  const end = parseShiftDateTime(endDate || shiftDate, endTime);
 
   if (!start || !end) {
     return null;
   }
 
   let actualEnd = end;
-  if (actualEnd <= start) {
+  if (!hasExplicitEndDate && actualEnd <= start) {
     actualEnd = new Date(actualEnd.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  if (actualEnd <= start) {
+    return null;
   }
 
   return { start, end: actualEnd };
@@ -171,8 +176,16 @@ const formatShiftHistoryTime = (record, boundary) => {
 };
 
 const getShiftEditValues = (record) => {
-  const startDate = record.startDateLocal || record.shiftDate || "";
-  const endDate = record.endDateLocal || record.shiftDate || "";
+  const startDate =
+    record.startDateLocal ||
+    record.shiftDate ||
+    (record.startTime && moment.utc(record.startTime).format("YYYY-MM-DD")) ||
+    "";
+  const endDate =
+    record.endDateLocal ||
+    (record.endTime && moment.utc(record.endTime).format("YYYY-MM-DD")) ||
+    record.shiftDate ||
+    "";
   const startTime =
     record.startTimeLocal ||
     (record.startTime && moment.utc(record.startTime).format("HH:mm")) ||
@@ -1015,7 +1028,7 @@ const Status = () => {
         onCancel={closeEditShift}
         open={Boolean(editingShift)}
         title="Edit Shift Efficiency Record"
-        width={680}
+        width={760}
       >
         <Form
           form={editShiftForm}
@@ -1023,16 +1036,16 @@ const Status = () => {
           onFinish={handleShiftUpdate}
         >
           <Row gutter={[12, 0]}>
-            <Col xs={24} md={8}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
-                label="Shift Date"
+                label="Start Date"
                 name="shiftDate"
-                rules={[{ required: true, message: "Select shift date" }]}
+                rules={[{ required: true, message: "Select start date" }]}
               >
                 <Input type="date" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
                 label="Start Time"
                 name="startTime"
@@ -1041,7 +1054,16 @@ const Status = () => {
                 <Input type="time" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label="End Date"
+                name="endDate"
+                rules={[{ required: true, message: "Select end date" }]}
+              >
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item
                 label="End Time"
                 name="endTime"
